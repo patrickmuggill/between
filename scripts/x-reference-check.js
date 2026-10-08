@@ -190,6 +190,8 @@ async (page) => {
 
     stage = 'incomplete source warning and complete pasted replacement';
     await testPage.getByRole('button', { name: 'New document', exact: true }).click();
+    // Tiptap focuses on the next animation frame; wait before filling another field.
+    await until(async () => await testPage.getByRole('textbox', { name: 'Document body', exact: true }).evaluate(element => document.activeElement === element), 'New document did not focus the editor');
     const incomplete = { ...source, url: 'https://x.com/fixture/status/67890', text: 'Synthetic shortened source…', textStatus: 'possibly_truncated' };
     referenceHandler = () => incomplete;
     await loadReference(incomplete.url);

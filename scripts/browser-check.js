@@ -73,7 +73,11 @@ async (page) => {
   const promptButton = testPage.getByRole('button', { name: /Make it happen/ });
   const newDocument = async name => {
     await testPage.getByRole('button', { name: 'New document', exact: true }).click();
+    // Tiptap focuses on the next animation frame; wait before filling another field.
+    await until(async () => await body.evaluate(element => document.activeElement === element), 'New document did not focus the editor');
     await title.fill(name);
+    assert(await title.inputValue() === name, 'Document title input lost focus');
+    assert(!(await body.innerText()).trim(), 'Naming a document changed its body');
     assert(await undo.isDisabled(), `Fresh document ${name} inherited undo history`);
     return picker.inputValue();
   };

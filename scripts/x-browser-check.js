@@ -122,6 +122,8 @@ async (page) => {
     await body.waitFor({ state: 'visible' });
     await documentMode.click();
     await testPage.getByRole('button', { name: 'New document', exact: true }).click();
+    // Tiptap focuses on the next animation frame; wait before filling another field.
+    await until(async () => await body.evaluate(element => document.activeElement === element), 'New document did not focus the editor');
     await title.fill('Browser fixture: original document');
     const originalText = 'Synthetic document fixture. This writing should survive a mode change.';
     await body.fill(originalText);
@@ -253,6 +255,8 @@ async (page) => {
 
     stage = 'unavailable source supports manual text';
     await testPage.getByRole('button', { name: 'New document', exact: true }).click();
+    // Tiptap focuses on the next animation frame; wait before filling another field.
+    await until(async () => await body.evaluate(element => document.activeElement === element), 'New document did not focus the editor');
     await title.fill('Browser fixture: manual reference');
     const manualId = await picker.inputValue();
     const manualUrl = 'https://x.com/fixture/status/23456';
@@ -292,6 +296,8 @@ async (page) => {
 
     stage = 'late source response cannot attach after document switch';
     await testPage.getByRole('button', { name: 'New document', exact: true }).click();
+    // Tiptap focuses on the next animation frame; wait before filling another field.
+    await until(async () => await body.evaluate(element => document.activeElement === element), 'New document did not focus the editor');
     await title.fill('Browser fixture: cancelled reference');
     const staleId = await picker.inputValue();
     const staleGate = deferred();
