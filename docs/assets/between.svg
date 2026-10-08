@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-labelledby="title description">
+  <title id="title">Between</title>
+  <desc id="description">A quiet writing space for your next X post.</desc>
+  <rect width="1200" height="320" rx="18" fill="#f3f5ec"/>
+  <g transform="translate(67 77) rotate(-12 37 57)"><rect width="21" height="82" rx="5" fill="#4f6852"/><rect x="36" y="27" width="21" height="55" rx="5" fill="#91a580"/></g>
+  <text x="168" y="147" fill="#303b33" font-family="Arial,Helvetica,sans-serif" font-size="82" font-weight="600" letter-spacing="-5">between</text>
+  <text x="72" y="228" fill="#4b6042" font-family="Georgia,serif" font-size="31">A quiet writing space for your next X post.</text>
+  <g stroke="#8da57b" stroke-width="2" fill="none" opacity=".55"><path d="M958 80h125v156H958z"/><path d="M980 115h80m-80 24h66m-66 24h76m-76 24h48"/><path d="M927 101h-30v156h125v-20"/></g>
+</svg>
