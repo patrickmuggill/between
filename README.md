@@ -98,13 +98,15 @@ Document context is prepared after the typing pause. Document-only Markdown proc
 ```sh
 npm test                 # Unit, security, setup, and server checks
 npm run build
-npx playwright install chromium
+node scripts/verified-browser.mjs # Requires patched stable Google Chrome
 npm run test:browser     # Isolated production browser checks; no real API calls
 npm run check:release    # Check release files for secrets and local-only paths
 npm run preview:readme   # Preview this README locally
 ```
 
 The browser runner starts its own temporary server and browser contexts. It does not use your API key or change an open writing session. The CI workflow runs the same checks; it needs no secrets.
+
+Browser checks require stable Google Chrome in its standard system location, at least 156.0.8078.74 on macOS/Windows or 156.0.8078.73 on Linux. The runner verifies the executable version before launch, verifies the application signature on macOS, and explicitly enables the Chromium sandbox. CI uses its preinstalled stable Chrome with the same checks. Missing, outdated, or unsandboxable browsers fail the run; bundled Chromium is never used as a fallback. Test sessions use temporary isolated profiles.
 
 ## Credits and license
 

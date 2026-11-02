@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import { verifiedBrowser } from "./verified-browser.mjs";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const require = createRequire(import.meta.url);
@@ -67,8 +68,9 @@ try {
   await readFile(path.join(root, "dist", "index.html"));
   await mkdir(path.join(root, "output", "playwright"), { recursive: true });
   const config = path.join(temporary, "playwright.json");
+  const launchOptions = await verifiedBrowser();
   await writeFile(config, JSON.stringify({
-    browser: { browserName: "chromium", isolated: true, launchOptions: { channel: "chromium", headless: true } },
+    browser: { browserName: "chromium", isolated: true, launchOptions },
   }));
   server = spawn(process.execPath, [path.join(root, "scripts", "browser-fixture-server.mjs")], { cwd: root, env, stdio: ["ignore", "pipe", "pipe"] });
   server.on("error", error => { serverOutput += `\n${error.message}`; });
@@ -97,9 +99,9 @@ try {
   }
   console.log("\nBrowser checks passed. Screenshots: output/playwright/");
 } catch (error) {
-  const message = /Browser .* is not installed|Executable doesn't exist/.test(error.message)
-    ? "Install the test browser with npx --no-install playwright install chromium, then run npm run test:browser again."
-    : error.code === "ENOENT" ? "Build the app first with npm run build. If Chromium is missing, run npx --no-install playwright install chromium." : error.message;
+  const message = error.code === "ENOENT"
+    ? "Build the app with npm run build and install an up-to-date stable Google Chrome in its standard system location. Browser checks require a verified patched browser and its sandbox; no fallback is permitted."
+    : error.message;
   console.error(message);
   process.exitCode = 1;
 } finally {
