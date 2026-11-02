@@ -28,7 +28,8 @@ jobs:
       - run: npm run check:release
       - run: npm test
       - run: npm run build
-      # Use the runner's stable Chrome; fail closed if it is missing or unpatched.
+      # Refresh stable Chrome on the ephemeral runner, then verify before launch.
+      - run: npx --no-install playwright install --with-deps --force chrome
       - run: node scripts/verified-browser.mjs
       - run: npm run test:browser
         env:
