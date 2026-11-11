@@ -54,6 +54,10 @@ async (page) => {
     assert(violations.length === 0, `${name} accessibility: ${JSON.stringify(violations)}`);
   };
   const body = p.getByRole('textbox', { name: 'Document body', exact: true });
+  const assertEditorFocus = async label => {
+    const heading = p.getByRole('heading', { name: 'Writing workspace', exact: true });
+    await until(async () => await heading.count() === 1 && await heading.evaluate(element => element === document.activeElement), `${label}: editor entry did not focus its workspace heading`);
+  };
   const nav = route => p.locator(`header a[href="#/${route}"]:visible`);
   const go = async route => {
     await nav(route).click();
@@ -100,12 +104,21 @@ async (page) => {
     passes.push('Fresh landing, loaded shared logo and watercolor, single primary CTA, keyboard focus and reduced motion');
 
     stage = 'editor and history';
-    await p.locator('.hero-actions a.primary-link[href="#/editor"]').click();
+    await p.locator('.hero-actions a.primary-link[href="#/editor"]').focus();
+    await p.keyboard.press('Enter');
     await body.waitFor();
+    await assertEditorFocus('Keyboard landing CTA');
     await p.getByRole('button', { name: 'Auto-detect on', exact: true }).click();
     await p.getByRole('button', { name: 'Or paste the post’s text', exact: true }).click();
     await p.getByRole('textbox', { name: 'Original post text', exact: true }).fill('Synthetic original source, kept separate from my draft.');
     await p.getByRole('textbox', { name: 'Reference author', exact: true }).fill('Synthetic author');
+    // Unsaved source entry is distinct from the saved reference: leave before
+    // pressing Use as reference and verify both fields survive intact.
+    await go('bookmarks');
+    await go('editor');
+    await assertEditorFocus('Return with unfinished reference');
+    assert(await p.getByRole('textbox', { name: 'Original post text', exact: true }).inputValue() === 'Synthetic original source, kept separate from my draft.', 'Route change discarded unfinished manual reference text');
+    assert(await p.getByRole('textbox', { name: 'Reference author', exact: true }).inputValue() === 'Synthetic author', 'Route change discarded unfinished manual reference author');
     await p.getByRole('button', { name: 'Use as reference', exact: true }).click();
     const quote = p.locator('.reference-card blockquote');
     const draft = 'Synthetic words preserved through every route.';
@@ -114,11 +127,13 @@ async (page) => {
     await go('bookmarks');
     await p.goBack();
     await body.waitFor();
+    await assertEditorFocus('Browser Back');
     assert((await body.innerText()).trim() === draft, 'Immediate route change lost the latest draft');
     assert(await quote.textContent() === 'Synthetic original source, kept separate from my draft.', 'Route switch lost or changed the reference');
     await p.goForward();
     assert(p.url().endsWith('#/bookmarks'), 'Browser Forward failed');
     await go('editor');
+    await assertEditorFocus('Navigation from bookmarks');
     assert(await logo.getAttribute('src') === logoSource, 'Editor uses a different logo');
     await body.press('End');
     await body.press('Enter');
@@ -138,7 +153,7 @@ async (page) => {
     }
     await p.getByRole('button', { name: 'Exit focus mode', exact: true }).click();
     await p.setViewportSize({ width: 1440, height: 1000 });
-    passes.push('Immediate navigation, Back/Forward, draft and editor undo preservation');
+    passes.push('Keyboard and direct editor entry focus, Back/Forward focus, unfinished reference fields, immediate draft/source navigation and editor undo preservation');
 
     stage = 'route cancellation';
     await body.fill('Write a synthetic greeting');
@@ -209,6 +224,7 @@ async (page) => {
     stage = 'direct route entry and blocked storage';
     await p.goto(`${base}/#/editor`);
     await body.waitFor();
+    await assertEditorFocus('Direct editor route');
     await p.goto(`${base}/#/bookmarks`);
     await card.waitFor();
     // Corrupt only this isolated context. Loading must preserve exact original

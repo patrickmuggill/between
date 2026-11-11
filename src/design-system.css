@@ -53,7 +53,8 @@ h1:focus { outline: none; }
 .bookmarks-heading h1 { font: 400 clamp(32px, 4vw, 48px)/1.25 var(--serif); letter-spacing: -.04em; margin: 0; }
 .bookmarks-heading p { color: var(--muted); line-height: 1.75; margin: var(--space-4) 0 0; max-width: 560px; }
 .bookmark-layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: var(--space-16); align-items: start; }
-.bookmark-form { display: flex; flex-direction: column; }
+.bookmark-form { display: flex; flex-direction: column; grid-column: 1; grid-row: 1; }
+.bookmark-collection { grid-column: 2; grid-row: 1; }
 .bookmark-form h2, .bookmark-collection > h2 { font: 400 24px/1.35 var(--serif); letter-spacing: -.025em; margin: 0 0 var(--space-3); }
 .bookmark-form > p { margin: 0 0 var(--space-6); font-size: 14px; line-height: 1.7; color: var(--muted); }
 .bookmark-form label { font-size: 14px; margin: 0 0 var(--space-2); }
@@ -77,6 +78,8 @@ h1:focus { outline: none; }
 /* Editor uses the same control sizes, spacing rhythm, and secondary type scale. */
 .app-header { height: auto; min-height: 104px; padding: var(--space-6) var(--space-12); gap: var(--space-6); flex-wrap: wrap; }
 .header-actions { gap: var(--space-2); }
+.document-controls { display: contents; }
+.mobile-add-reference { display: none; }
 .icon-button, .toolbar .icon-button { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
 .header-divider { margin: 0 var(--space-1); }
 .mode-switch { gap: var(--space-1); padding: var(--space-1); }
@@ -167,18 +170,19 @@ h1:focus { outline: none; }
   .bookmarks-heading { padding-bottom: var(--space-8); margin-bottom: var(--space-8); }
   .bookmarks-heading > svg { display: none; }
   .bookmark-layout { grid-template-columns: 1fr; gap: var(--space-12); }
+  .bookmark-layout > * { grid-column: auto; grid-row: auto; }
+  .mobile-add-reference { display: inline-flex; margin: 0 0 var(--space-6); }
   .bookmark-empty { padding: var(--space-8) var(--space-6); }
   .app-header { padding: var(--space-4) var(--space-6); height: auto; min-height: 0; gap: var(--space-4); display: grid; grid-template-columns: 1fr auto; }
   .app-header .wordmark { grid-column: 1; }
   .app-header .mode-switch { grid-row: 2; grid-column: 1 / -1; position: static; justify-self: start; }
   .header-actions { display: contents; }
   .workspace-bookmarks { grid-column: 2; grid-row: 1; justify-self: end; }
-  .header-actions .document-picker { grid-column: 1 / -1; grid-row: 3; position: static; display: flex; }
-  .document-picker select { max-width: 100% !important; width: 100%; font-size: 16px; }
+  .header-actions .document-controls { grid-column: 1 / -1; grid-row: 3; display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+  .header-actions .document-picker { position: static; display: flex; flex: 1; min-width: 0; }
+  .document-picker select { max-width: 100% !important; width: 100%; min-width: 0; font-size: 16px; }
   .document-picker > svg { display: block; }
-  .header-actions > .icon-button { grid-row: 4; }
-  .header-actions > .icon-button:last-child { grid-column: 2; grid-row: 2; justify-self: end; }
-  .header-actions > .icon-button:nth-last-child(2) { grid-column: 2; justify-self: end; }
+  .header-actions > .focus-button { grid-column: 2; grid-row: 2; justify-self: end; }
   .header-divider { display: none; }
   .workspace, .workspace.x-workspace, .is-focused.x-mode .x-workspace { width: calc(100% - 48px); margin-top: var(--space-8); margin-bottom: var(--space-12); }
   .workspace.x-workspace { display: flex; flex-direction: column; gap: var(--space-10); }

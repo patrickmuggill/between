@@ -939,6 +939,7 @@ export default function App({ visible, bookmarkRequest, onBookmarkHandled, onSav
         </div>
         <nav className="header-actions" aria-label="Workspace">
           <a className="workspace-bookmarks" href="#/bookmarks">Bookmarks</a>
+          <div className="document-controls">
           <div className="document-picker">
             <FileText size={16} />
             <select
@@ -972,8 +973,9 @@ export default function App({ visible, bookmarkRequest, onBookmarkHandled, onSav
           >
             <Question size={20} />
           </button>
+          </div>
           <button
-            className="icon-button"
+            className="icon-button focus-button"
             aria-label={focusMode ? "Exit focus mode" : "Focus mode"}
             title="Focus mode"
             onClick={() => setFocusMode(!focusMode)}

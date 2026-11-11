@@ -45,6 +45,15 @@ export default function FrontDoor() {
     setEditorVisited(true);
     location.hash = '/editor';
   }
+  const bookmarkForm = <BookmarkForm key="form" blocked={bookmarkState.blocked} onSave={(reference) => {
+          const result = saveReference(reference); return result === 'Saved to bookmarks.' || result === 'Already in bookmarks.';
+        }} />;
+  const bookmarkCollection = <section key="collection" className="bookmark-collection" aria-label="Saved bookmarks">
+          <h2>Saved references <span>{bookmarkState.items.length}</span></h2>
+          {removed.length > 0 && <div className="bookmark-undo" role="status"><span>Bookmark removed.</span><button onClick={() => { const item = removed[removed.length - 1]; if (persist([item, ...bookmarkState.items])) setRemoved(removed.slice(0, -1)); }}>Undo</button></div>}
+          {!bookmarkState.items.length && <div className="bookmark-empty"><BookmarkSimple size={32} weight="light" /><h3>Your next thought starts here.</h3><p>Save a post’s text or link. When you’re ready, open it beside a new draft.</p></div>}
+          {bookmarkState.items.map(item => <article className="bookmark-card" key={item.id}><header><h3>{item.reference.authorName || 'Saved reference'}</h3><button className="icon-button" aria-label={`Remove bookmark by ${item.reference.authorName}`} onClick={() => { if (persist(bookmarkState.items.filter(b => b.id !== item.id))) setRemoved([...removed, item]); }}><X size={18} /></button></header>{item.reference.text ? <p className="bookmark-text">{item.reference.text}</p> : <p>Link saved. Open a draft to load the post or paste its text.</p>}<div className="bookmark-card-actions"><button className="secondary-button" onClick={() => openBookmark(item)}>Write a response <ArrowRight size={16} /></button>{item.reference.url && <a className="text-link" href={item.reference.url} target="_blank" rel="noreferrer">Original post ↗</a>}</div></article>)}
+        </section>;
   return <>
     {route !== 'editor' && <header className={`site-header ${route === 'bookmarks' ? 'bookmarks-header' : 'home-header'}`}>
       <Brand />
@@ -75,15 +84,12 @@ export default function FrontDoor() {
         <div className="bookmarks-heading"><div><h1 ref={route === 'bookmarks' ? routeHeading : undefined} tabIndex={-1}>Thoughts to return to.</h1><p>References you save in Between, on this browser. Nothing is imported from X.</p></div><BookmarkSimple size={32} weight="light" aria-hidden="true" /></div>
         {bookmarkState.blocked && <div className="storage-recovery" role="alert"><p>Saved bookmarks could not be read. Saving is paused and the original data is untouched. Export the original data if available before clearing browser storage.</p>{bookmarkState.raw !== null && <button className="subtle-button" onClick={() => { const url = URL.createObjectURL(new Blob([bookmarkState.raw!], { type: 'application/json' })); const a = document.createElement('a'); a.href = url; a.download = 'between-bookmarks-recovery.json'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }}>Download original data</button>}</div>}
         {bookmarkError && <p className="source-error" role="alert">{bookmarkError}</p>}
-        <div className="bookmark-layout"><BookmarkForm blocked={bookmarkState.blocked} onSave={(reference) => {
-          const result = saveReference(reference); return result === 'Saved to bookmarks.' || result === 'Already in bookmarks.';
-        }} />
-        <section className="bookmark-collection" aria-label="Saved bookmarks">
-          <h2>Saved references <span>{bookmarkState.items.length}</span></h2>
-          {removed.length > 0 && <div className="bookmark-undo" role="status"><span>Bookmark removed.</span><button onClick={() => { const item = removed[removed.length - 1]; if (persist([item, ...bookmarkState.items])) setRemoved(removed.slice(0, -1)); }}>Undo</button></div>}
-          {!bookmarkState.items.length && <div className="bookmark-empty"><BookmarkSimple size={32} weight="light" /><h3>Your next thought starts here.</h3><p>Save a post’s text or link. When you’re ready, open it beside a new draft.</p></div>}
-          {bookmarkState.items.map(item => <article className="bookmark-card" key={item.id}><header><h3>{item.reference.authorName || 'Saved reference'}</h3><button className="icon-button" aria-label={`Remove bookmark by ${item.reference.authorName}`} onClick={() => { if (persist(bookmarkState.items.filter(b => b.id !== item.id))) setRemoved([...removed, item]); }}><X size={18} /></button></header>{item.reference.text ? <p className="bookmark-text">{item.reference.text}</p> : <p>Link saved. Open a draft to load the post or paste its text.</p>}<div className="bookmark-card-actions"><button className="secondary-button" onClick={() => openBookmark(item)}>Write a response <ArrowRight size={16} /></button>{item.reference.url && <a className="text-link" href={item.reference.url} target="_blank" rel="noreferrer">Original post ↗</a>}</div></article>)}
-        </section></div>
+        {bookmarkState.items.length > 0 && <button className="mobile-add-reference secondary-button" onClick={() => {
+          const input = document.getElementById('bookmark-url');
+          input?.focus({ preventScroll: true });
+          input?.scrollIntoView({ block: 'center', behavior: 'auto' });
+        }}><Plus size={18} /> Add a reference</button>}
+        <div className="bookmark-layout">{bookmarkState.items.length ? [bookmarkCollection, bookmarkForm] : [bookmarkForm, bookmarkCollection]}</div>
       </main>
     </div>
     {editorVisited && <div hidden={route !== 'editor'} inert={route !== 'editor'}><App visible={route === 'editor'} bookmarkRequest={request} onBookmarkHandled={() => setRequest(null)} onSaveBookmark={saveReference} /></div>}
