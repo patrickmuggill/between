@@ -24,7 +24,7 @@ async (page) => {
   });
   const assert = (value, message) => { if (!value) throw new Error(message); };
   try {
-    await testPage.goto(base);
+    await testPage.goto(`${base}/#/editor`);
     const toggle = testPage.getByRole('button', { name: 'Edit reference text', exact: true });
     await toggle.click();
     const input = testPage.getByRole('textbox', { name: 'Original post text', exact: true });

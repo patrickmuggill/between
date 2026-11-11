@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+const PUBLIC_IMAGES = new Set(['/images/logo.png', '/images/walden-pond.webp']);
 
 /** Check the actual Host and Origin, never proxy-supplied forwarding headers. */
 export function isLocalRequest(req) {
@@ -73,7 +74,7 @@ export function browserPathOnly(root, { development = false } = {}) {
       if (!absolute.startsWith(`${normalizedRoot}/`)) return res.status(403).json({ error: 'This file is not served by the app.' });
       pathname = absolute.slice(normalizedRoot.length);
     }
-    const browserFile = pathname === '/' || pathname === '/index.html' || pathname === '/favicon.svg' || pathname.startsWith('/assets/');
+    const browserFile = pathname === '/' || pathname === '/index.html' || pathname === '/favicon.svg' || PUBLIC_IMAGES.has(pathname) || pathname.startsWith('/assets/');
     const developmentFile = development && (
       pathname.startsWith('/src/') || pathname.startsWith('/node_modules/') ||
       ['/@vite/client', '/@vite/env', '/@react-refresh'].includes(pathname) ||

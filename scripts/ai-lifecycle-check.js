@@ -88,7 +88,7 @@ async (page) => {
   });
   let stage = 'generation cancellation';
   try {
-    await testPage.goto(base);
+    await testPage.goto(`${base}/#/editor`);
     await testPage.getByRole('button', { name: 'Document', exact: true }).click();
     await testPage.getByRole('button', { name: 'Auto-detect on', exact: true }).click();
     for (const outcome of ['resolve', 'reject']) {

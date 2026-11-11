@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useEffect, useMemo, useRef, useState } from "react";
 import { EditorContent, useEditor, useEditorState, type Editor, type JSONContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -41,6 +41,7 @@ import XPostTools from "./XPostTools";
 import { plainPost } from "./x-post";
 import type { XPrompt } from "./x-prompts";
 import ConnectionDialog from "./ConnectionDialog";
+import Brand from "./Brand";
 import { AILifecycle, type AIPhase } from "./ai-lifecycle";
 import { isBackdropClick } from "./dialog";
 
@@ -103,7 +104,17 @@ function plainTextParagraphs(text: string): JSONContent[] {
   }));
 }
 
-export default function App() {
+type AppProps = {
+  visible: boolean;
+  bookmarkRequest: { id: string; reference: XReference } | null;
+  onBookmarkHandled: () => void;
+  onSaveBookmark: (reference: XReference) => string;
+};
+export default function App({ visible, bookmarkRequest, onBookmarkHandled, onSaveBookmark }: AppProps) {
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
+  const handledBookmark = useRef<string | null>(null);
+  const workspaceHeading = useRef<HTMLHeadingElement>(null);
   const [documentLoad] = useState(() => loadDocumentState());
   const [documents, setDocuments] = useState(documentLoad.documents);
   const documentsRef = useRef(documents);
@@ -329,14 +340,14 @@ export default function App() {
 
   function valid(s: Snapshot) {
     return (
-      mounted.current &&
+      mounted.current && visibleRef.current && location.hash === "#/editor" &&
       revision.current === s.revision &&
       activeRef.current === s.docId
     );
   }
 
   async function classify(s: Snapshot, commit = false) {
-    if (["missing", "loading", "error"].includes(connectionRef.current)) return;
+    if (!visibleRef.current || ["missing", "loading", "error"].includes(connectionRef.current)) return;
     if (s.mode === "x" && writingOverrides.current.get(s.docId)?.has(s.text.trim()))
       return;
     const request = lifecycle.current.begin("detecting");
@@ -400,7 +411,7 @@ export default function App() {
   function schedule(e: Editor) {
     clearDetection();
     if (
-      !autoRef.current || lifecycle.current.phase === "generating" || e.view.composing ||
+      !visibleRef.current || !autoRef.current || lifecycle.current.phase === "generating" || e.view.composing ||
       connectionRef.current !== "ready"
     ) return;
     const from = selectedBlockStart(e);
@@ -495,7 +506,7 @@ export default function App() {
     target?: Snapshot,
     knownDecision?: Decision,
   ) {
-    if (!editor || lifecycle.current.phase === "generating" || editor.view.composing) return;
+    if (!visibleRef.current || !editor || lifecycle.current.phase === "generating" || editor.view.composing) return;
     if (connectionRef.current === "missing" || connectionRef.current === "error") {
       connectionDialog.current?.showModal();
       return;
@@ -678,6 +689,31 @@ export default function App() {
     setNotice({ text: "Stopped. Your writing is unchanged." });
   }
 
+  // Keep the editor mounted across routes so history and unfinished reference
+  // entry survive. Suspend provider work and flush drafts before hiding it.
+  useLayoutEffect(() => {
+    if (visible) {
+      if (!bookmarkRequest) workspaceHeading.current?.focus({ preventScroll: true });
+      return;
+    }
+    clearDetection();
+    stopGeneration();
+    helpRef.current?.close();
+    connectionDialog.current?.close();
+    try {
+      saveDocuments(localStorage, documentLoad, documentsRef.current, activeRef.current);
+      setSaved(true); setStorageError(false);
+    } catch { setSaved(false); setStorageError(true); }
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible || !editor || !bookmarkRequest || handledBookmark.current === bookmarkRequest.id) return;
+    handledBookmark.current = bookmarkRequest.id;
+    newDocument("x", bookmarkRequest.reference);
+    setFocusMode(false);
+    onBookmarkHandled();
+  }, [visible, editor, bookmarkRequest]);
+
   useEffect(() => {
     mounted.current = true;
     const controller = new AbortController();
@@ -743,7 +779,7 @@ export default function App() {
     resetHistory(editor);
     setNotice(null);
   }
-  function newDocument(mode: "document" | "x" = active.mode || "document") {
+  function newDocument(mode: "document" | "x" = active.mode || "document", reference?: XReference) {
     if (!editor || lifecycle.current.phase === "generating") return;
     const doc: DocumentRecord = {
       id: crypto.randomUUID(),
@@ -752,6 +788,7 @@ export default function App() {
       updated: Date.now(),
       mode,
       includeSource: true,
+      ...(reference ? { reference } : {}),
     };
     clearDetection();
     revision.current += 1;
@@ -883,13 +920,7 @@ export default function App() {
       className={`app ${focusMode ? "is-focused" : ""} ${xMode ? "x-mode" : ""}`}
     >
       <header className="app-header">
-        <a className="wordmark" href="/" aria-label="Between home">
-          <span className="brand-symbol" aria-hidden="true">
-            <i />
-            <i />
-          </span>
-          between
-        </a>
+        <Brand />
         <div className="mode-switch" role="group" aria-label="Writing mode">
           <button
             aria-pressed={!xMode}
@@ -907,6 +938,7 @@ export default function App() {
           </button>
         </div>
         <nav className="header-actions" aria-label="Workspace">
+          <a className="workspace-bookmarks" href="#/bookmarks">Bookmarks</a>
           <div className="document-picker">
             <FileText size={16} />
             <select
@@ -956,9 +988,12 @@ export default function App() {
       </header>
 
       <main className={`workspace ${xMode ? "x-workspace" : ""}`}>
+        <h1 className="visually-hidden" ref={workspaceHeading} tabIndex={-1}>Writing workspace</h1>
         {xMode && (
           <XReferenceSidebar
             key={activeId}
+            visible={visible}
+            onSaveBookmark={(reference) => setNotice({ text: onSaveBookmark(reference) })}
             reference={active.reference}
             disabled={generating}
             onChange={(reference) => updateXDocument({ reference })}
@@ -1172,6 +1207,7 @@ export default function App() {
           )}
           {xMode ? (
             <XPostTools
+              visible={visible}
               draft={draftForCopy}
               sourceUrl={active.reference?.url}
               includeSource={active.includeSource !== false}

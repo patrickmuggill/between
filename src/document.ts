@@ -87,7 +87,7 @@ export function loadDocumentState(storage?: DraftStorage): DocumentLoad {
         ids.add(doc.id);
         let reference: XReference | undefined;
         const value = doc.reference;
-        if (value && typeof value.text === "string" && value.text.trim() && value.text.length <= 60_000 &&
+        if (value && typeof value.text === "string" && (value.text.trim() || value.url) && value.text.length <= 60_000 &&
           typeof value.authorName === "string" && value.authorName.length <= 200 &&
           ["x", "manual"].includes(value.source) && typeof value.url === "string") {
           try {

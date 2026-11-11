@@ -36,7 +36,7 @@ async (page) => {
       return route.continue();
     });
     try {
-      await testPage.goto(base);
+      await testPage.goto(`${base}/#/editor`);
       const body = testPage.getByRole('textbox', { name: 'Document body', exact: true });
       assert((await body.innerText()).includes('Synthetic words to recover.'), 'Readable draft was not recovered');
       const warning = testPage.getByRole('alert').filter({ hasText: 'Some saved drafts could not be opened' });

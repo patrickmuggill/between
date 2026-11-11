@@ -99,3 +99,11 @@ test('malformed references do not hide their drafts and their original bytes are
   assert.equal(load.documents[0].reference, undefined);
   assert.equal(store.values.get(load.recovery.backupKey), raw);
 });
+
+test('a saved link-only bookmark reference survives draft reload', () => {
+  const record = { ...draft(), reference: { url: 'https://x.com/example/status/12345', text: '', authorName: 'Saved reference', source: 'manual' } };
+  const load = loadDocumentState(storage(JSON.stringify([record])));
+  assert.equal(load.recovery, null);
+  assert.equal(load.documents[0].reference.url, record.reference.url);
+  assert.equal(load.documents[0].reference.text, '');
+});

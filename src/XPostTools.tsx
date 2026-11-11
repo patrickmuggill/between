@@ -12,6 +12,7 @@ import { composePost, composerUrl, postLength } from "./x-post";
 import { X_PROMPT_GROUPS, type XPrompt } from "./x-prompts";
 
 type Props = {
+  visible: boolean;
   draft: string;
   sourceUrl?: string;
   includeSource: boolean;
@@ -22,6 +23,7 @@ type Props = {
   onPrompt: (prompt: XPrompt) => void;
 };
 export default function XPostTools({
+  visible,
   draft,
   sourceUrl,
   includeSource,
@@ -34,6 +36,9 @@ export default function XPostTools({
   const [copied, setCopied] = useState(false);
   const [group, setGroup] = useState(X_PROMPT_GROUPS[0].id);
   const manualCopy = useRef<HTMLDialogElement>(null);
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
+  useEffect(() => { if (!visible) manualCopy.current?.close(); }, [visible]);
   const manualText = useRef<HTMLTextAreaElement>(null);
   const text = useMemo(() => composePost(draft, includeSource ? sourceUrl : undefined), [draft, includeSource, sourceUrl]);
   const length = useMemo(() => postLength(text), [text]);
@@ -53,6 +58,7 @@ export default function XPostTools({
       await navigator.clipboard.writeText(text);
       setCopied(true);
     } catch {
+      if (!visibleRef.current) return;
       manualCopy.current?.showModal();
       manualText.current?.focus();
       manualText.current?.select();

@@ -12,11 +12,15 @@ import { normalizeXUrl } from "./x-post";
 
 type Props = {
   reference?: XReference;
+  visible: boolean;
+  onSaveBookmark: (reference: XReference) => void;
   disabled: boolean;
   onChange: (reference?: XReference) => void;
 };
 export default function XReferenceSidebar({
   reference,
+  visible,
+  onSaveBookmark,
   disabled,
   onChange,
 }: Props) {
@@ -34,19 +38,20 @@ export default function XReferenceSidebar({
   }, [manual]);
   const abort = useRef<AbortController | null>(null);
   useEffect(() => () => abort.current?.abort(), []);
+  useEffect(() => { if (!visible) { abort.current?.abort(); setLoading(false); } }, [visible]);
   useEffect(() => {
     // Upgrade references saved before full-text lookup was introduced.
     if (reference?.source === "x" && !reference.textStatus) void loadPost();
   }, []);
   useEffect(() => {
-    if (!pendingReference || disabled) return;
+    if (!pendingReference || disabled || !visible) return;
     onChange(pendingReference);
     setUrl(pendingReference.url);
     setManualText(pendingReference.text);
     setAuthor(pendingReference.authorName);
     setManual(false);
     setPendingReference(null);
-  }, [pendingReference, disabled, onChange]);
+  }, [pendingReference, disabled, visible, onChange]);
 
   async function loadPost() {
     setError("");
@@ -217,6 +222,7 @@ export default function XReferenceSidebar({
               }}>Paste complete text <ArrowRight size={13} /></button>
             </div>
           )}
+          <button className="save-reference" onClick={() => onSaveBookmark(reference)}>Save to bookmarks</button>
           <button
             className="remove-source"
             disabled={disabled || loading}

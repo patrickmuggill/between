@@ -12,6 +12,8 @@ The writing-or-prompting interaction is inspired by **[Kasper Marx Andersen’s 
 
 ## What it does
 
+- **Starts with a little space.** A minimalist home page leads to your writing workspace or saved references.
+- **Keeps references for later.** Save post text or an X link in Bookmarks, then open it beside a new draft. Bookmarks are saved in this browser, not imported from X; removal has Undo during the session.
 - **Keeps the original close.** Paste an X link and read the reference alongside your own words. Long references expand without clipping. If X withholds the full text, paste it yourself.
 - **Understands an inline request.** Write “make this more concise” in the document. OpenAI detects the request; Enter turns it into an edit.
 - **Offers useful editorial help.** Nine prompts help you find a takeaway, test a premise, sharpen an opening, preserve nuance, or fit one post.
@@ -41,6 +43,8 @@ For development, use `npm run dev` instead of the build/start steps.
 
 ## Writing with Between
 
+Open **Start writing** from the home page, or save a reference under **Bookmarks** for later. The logo returns home without discarding your open editor or undo history.
+
 1. Paste a post link in **Reference post**, or paste its text. You can also write an original post with no reference.
 2. Write your own take. A paragraph identified as a request turns green; press **Enter** to run it. Editorial prompts can also apply an edit directly.
 3. Review the result. **Undo** restores the previous version. Identified inline instructions stay out of copied text; **Treat as writing** reverses a false positive.
@@ -58,7 +62,7 @@ The counter follows standard X weighting: links count as 23 characters, and emoj
 
 ## Privacy and control
 
-- Drafts and reference text save in **this browser’s local storage**. There is no account, analytics service, or server-side draft database. Use the same local URL each time; clearing browser storage removes drafts. Export anything you want to keep elsewhere.
+- Drafts, bookmarks, and reference text save in **this browser’s local storage**. There is no account, analytics service, or server-side draft database. Use the same local URL each time; clearing browser storage removes drafts. Export anything you want to keep elsewhere.
 - With **Auto-detect on**, the current paragraph, surrounding draft, and attached reference go to OpenAI after a short pause. Turn it off to send text only when you explicitly request help. Both modes use your own API key.
 - Generation uses the Responses API with `store: false`. This is not a promise of zero retention; [OpenAI’s API data controls](https://developers.openai.com/api/docs/guides/your-data) still apply.
 - Loading an X reference contacts X. The server extracts text without executing X’s scripts or forwarding your browser cookies. Quotes, media, unavailable posts, or changes to X’s public pages may require opening the original or pasting the full text.

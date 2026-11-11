@@ -118,7 +118,7 @@ async (page) => {
     await until(async () => await testPage.locator('.character-count').getAttribute('aria-label') === `${expected} of 280 weighted characters`, `Expected weighted count ${expected}`);
   };
   try {
-    await testPage.goto(base, { waitUntil: 'domcontentloaded' });
+    await testPage.goto(`${base}/#/editor`, { waitUntil: 'domcontentloaded' });
     await body.waitFor({ state: 'visible' });
     await documentMode.click();
     await testPage.getByRole('button', { name: 'New document', exact: true }).click();

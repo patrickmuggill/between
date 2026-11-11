@@ -86,7 +86,7 @@ async (page) => {
   const isEditable = () => until(async () => await body.getAttribute('contenteditable') === 'true', 'Editor remained locked');
   let stage = 'load';
   try {
-    await testPage.goto(base, { waitUntil: 'domcontentloaded' });
+    await testPage.goto(`${base}/#/editor`, { waitUntil: 'domcontentloaded' });
     await body.waitFor();
 
     stage = 'mode remembers the active draft';

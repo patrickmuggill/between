@@ -148,7 +148,7 @@ async (page) => {
   let stage = 'initial load';
   try {
     assert(longText.length === 25000 && emojiText.length === 50000, 'Long-source fixtures have the wrong lengths');
-    await testPage.goto(base, { waitUntil: 'domcontentloaded' });
+    await testPage.goto(`${base}/#/editor`, { waitUntil: 'domcontentloaded' });
     await sidebar.waitFor();
 
     stage = 'complete 25k source at desktop and mobile';
