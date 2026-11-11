@@ -52,7 +52,7 @@ async (page) => {
         return Promise.reject(new Error('Unexpected fixture API'));
       }
       return new Promise((resolve, reject) => {
-        fixture.requests.push({ kind, resolve, reject, signal: init?.signal, settled: false });
+        fixture.requests.push({ kind, input: JSON.parse(init.body), resolve, reject, signal: init?.signal, settled: false });
       });
     };
   });
@@ -71,9 +71,22 @@ async (page) => {
   );
   const state = index => testPage.evaluate(index => {
     const request = window.__aiFixture.requests[index];
-    return { settled: request.settled, aborted: request.signal.aborted };
+    return { kind: request.kind, input: request.input, settled: request.settled, aborted: request.signal.aborted };
   }, index);
   const body = testPage.getByRole('textbox', { name: 'Document body', exact: true });
+  const selection = () => body.evaluate(element => {
+    const selected = window.getSelection();
+    const anchor = selected?.anchorNode;
+    const anchorElement = anchor?.nodeType === Node.ELEMENT_NODE ? anchor : anchor?.parentElement;
+    return {
+      paragraph: anchorElement?.closest('p')?.textContent ?? null,
+      offset: selected?.anchorOffset,
+      collapsed: selected?.isCollapsed,
+      editorFocused: document.activeElement === element,
+      paragraphs: [...element.querySelectorAll('p')].map(paragraph => paragraph.textContent),
+    };
+  });
+  let stage = 'generation cancellation';
   try {
     await testPage.goto(base);
     await testPage.getByRole('button', { name: 'Document', exact: true }).click();
@@ -109,23 +122,42 @@ async (page) => {
     assert(!(await body.innerText()).includes('Current completion'), 'Mode switch leaked document content');
     assert(await toolbar.getByRole('button', { name: 'Undo', exact: true }).isDisabled(), 'Mode switch leaked undo history');
     await testPage.getByRole('button', { name: 'Document', exact: true }).click();
+    stage = 'stale detection setup';
     await body.fill('First synthetic paragraph');
     await body.press('Control+End');
     await body.press('Enter');
     await testPage.keyboard.type('Second synthetic paragraph');
+    const paragraphs = body.locator('p');
+    assert(await paragraphs.count() === 2, `Expected two separate paragraphs: ${JSON.stringify(await selection())}`);
+    assert(await paragraphs.nth(0).textContent() === 'First synthetic paragraph', 'First paragraph setup failed');
+    assert(await paragraphs.nth(1).textContent() === 'Second synthetic paragraph', 'Second paragraph setup failed');
     await testPage.evaluate(() => { window.__aiFixture.holdDetection = true; });
     await testPage.getByRole('button', { name: 'Auto-detect off', exact: true }).click();
     for (const outcome of ['resolve', 'quota']) {
+      stage = `stale detection ${outcome}`;
       const index = await count();
-      await body.press('Control+End');
+      await paragraphs.nth(1).click();
+      await body.press('End');
       await testPage.keyboard.type('.');
       await until(async () => await count() === index + 1, 'Detection did not start');
-      // Move away and back without changing the draft revision. Snapshot checks
-      // alone would accept this response after the return to the same paragraph.
-      await body.press('Control+Home');
-      await body.press('Control+End');
+      const detecting = await state(index);
+      assert(detecting.kind === 'decide' && detecting.input.text.startsWith('Second synthetic paragraph'),
+        `Detection targeted the wrong paragraph: ${JSON.stringify(detecting)}`);
+      const originalContent = await body.innerHTML();
+      // DOM selectionchange is asynchronous. Observe the intermediate paragraph
+      // and cancellation before returning, instead of issuing Home/End back to
+      // back (which Chromium may coalesce into one final selectionchange).
+      await paragraphs.nth(0).click();
+      await until(async () => (await selection()).paragraph === 'First synthetic paragraph',
+        'Cursor did not reach the first paragraph');
+      await until(async () => (await state(index)).aborted,
+        'Leaving a paragraph did not revoke detection');
+      await paragraphs.nth(1).click();
+      await until(async () => (await selection()).paragraph?.startsWith('Second synthetic paragraph'),
+        'Cursor did not return to the second paragraph');
+      assert(await body.innerHTML() === originalContent, 'Cursor navigation changed the draft');
       const obsolete = await state(index);
-      assert(obsolete.aborted && !obsolete.settled, 'Leaving a paragraph did not revoke detection');
+      assert(obsolete.aborted && !obsolete.settled, 'Obsolete detection must remain aborted and pending after return');
       await release(index, outcome, '');
       await testPage.waitForTimeout(150);
       assert(await testPage.getByRole('button', { name: /Make it happen/ }).count() === 0, 'Stale detection revived a prompt');
@@ -136,6 +168,16 @@ async (page) => {
     assert(unexpected.length === 0, unexpected.join('\n'));
     assert(errors.length === 0, errors.join('\n'));
     return { ok: true, checks: ['Stop and immediate retry', 'late cancelled completion and rejection isolation', 'cursor away/back stale detection and quota error isolation', 'single-step undo/redo', 'mode history isolation'] };
+  } catch (error) {
+    const diagnostics = {
+      stage,
+      selection: await selection().catch(() => null),
+      requests: await testPage.evaluate(() => window.__aiFixture.requests.map(request => ({
+        kind: request.kind, input: request.input, aborted: request.signal?.aborted, settled: request.settled,
+      }))).catch(() => null),
+    };
+    await testPage.screenshot({ path: 'output/playwright/ai-lifecycle-failure.png', fullPage: true }).catch(() => {});
+    throw new Error(`${error.message}\nLifecycle diagnostics: ${JSON.stringify(diagnostics)}`);
   } finally {
     await context.close();
   }

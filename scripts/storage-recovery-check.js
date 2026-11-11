@@ -14,9 +14,12 @@ async (page) => {
         id: 'recovery-fixture', title: 'Recovery fixture', mode: 'document', updated: 1,
         content: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Synthetic words to recover.' }] }] },
       }, null]);
-      localStorage.setItem('between.documents.v1', raw);
-      localStorage.setItem('between.active.v1', 'recovery-fixture');
-      localStorage.setItem('synthetic-original', raw);
+      // Initialize this fresh context once; reload must exercise persisted data.
+      if (localStorage.getItem('synthetic-original') === null) {
+        localStorage.setItem('between.documents.v1', raw);
+        localStorage.setItem('between.active.v1', 'recovery-fixture');
+        localStorage.setItem('synthetic-original', raw);
+      }
       if (failBackup) {
         const originalSetItem = Storage.prototype.setItem;
         Storage.prototype.setItem = function(key, value) {
@@ -43,6 +46,14 @@ async (page) => {
       await warning.getByRole('button', { name: 'Download original data' }).click();
       const download = await downloadPromise;
       assert(download.suggestedFilename() === 'between-original-drafts.json', 'Recovery download missing');
+      // Read the actual Playwright download stream: run-code has Buffer but no
+      // Node require/filesystem access. This checks bytes, not just its filename.
+      const original = await testPage.evaluate(() => localStorage.getItem('synthetic-original'));
+      const stream = await download.createReadStream();
+      assert(stream !== null, 'Recovery download stream missing');
+      const chunks = [];
+      for await (const chunk of stream) chunks.push(chunk);
+      assert(Buffer.concat(chunks).equals(Buffer.from(original, 'utf8')), 'Recovery download changed original bytes');
       await body.fill('New synthetic writing.');
       await testPage.waitForTimeout(500);
       await testPage.evaluate(() => window.dispatchEvent(new Event('pagehide')));
@@ -59,8 +70,31 @@ async (page) => {
         assert(JSON.parse(state.current)[0].content.content[0].content[0].text === 'New synthetic writing.', 'Recovered document did not save');
       }
       await testPage.screenshot({ path: `output/playwright/storage-recovery-${failBackup ? 'blocked' : 'saved'}.png`, fullPage: true });
+      await testPage.reload();
+      await body.waitFor({ state: 'visible' });
+      await testPage.waitForTimeout(500);
+      const reloaded = await testPage.evaluate(() => ({
+        current: localStorage.getItem('between.documents.v1'),
+        backup: localStorage.getItem('between.documents.v1.recovery'),
+        backupCount: Object.keys(localStorage).filter(key => key.startsWith('between.documents.v1.recovery')).length,
+      }));
+      if (failBackup) {
+        assert(reloaded.current === state.raw, 'Reload overwrote unbacked original data');
+        assert(reloaded.backup === null && reloaded.backupCount === 0, 'Reload bypassed backup failure');
+        assert((await body.innerText()).includes('Synthetic words to recover.'), 'Reload did not recover original readable draft');
+        assert(!(await body.innerText()).includes('New synthetic writing.'), 'Paused session unexpectedly saved new writing');
+        await warning.waitFor({ state: 'visible' });
+        assert((await warning.innerText()).includes('Saving is paused'), 'Reload lost backup failure warning');
+      } else {
+        assert(reloaded.current === state.current, 'Repaired collection changed after reload');
+        assert(reloaded.backup === state.raw && reloaded.backupCount === 1, 'Reload replaced or duplicated original backup');
+        assert((await body.innerText()).includes('New synthetic writing.'), 'Reload lost saved recovered draft edits');
+        await warning.waitFor({ state: 'hidden' });
+      }
       assert(errors.length === 0, errors.join('\n'));
-      checks.push(failBackup ? 'Failed backup blocks autosave and pagehide writes' : 'Recovered drafts save only after original-data backup');
+      checks.push(failBackup
+        ? 'Exact recovery download; failed backup blocks autosave, pagehide, and reload writes'
+        : 'Exact recovery download; repaired collection and original backup survive reload');
     } finally {
       await context.close();
     }
