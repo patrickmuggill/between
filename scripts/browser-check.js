@@ -89,7 +89,7 @@ async (page) => {
   const visibleText = async () => (await body.innerText()).trim();
   const waitForText = async text => until(async () => (await visibleText()).includes(text), `Missing editor text: ${text}`);
   try {
-    await testPage.goto(base, { waitUntil: 'domcontentloaded' });
+    await testPage.goto(`${base}/#/editor`, { waitUntil: 'domcontentloaded' });
     await testPage.getByRole('button', { name: 'Document', exact: true }).click();
     await body.waitFor({ state: 'visible' });
     await testPage.locator('body').ariaSnapshot();

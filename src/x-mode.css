@@ -1,7 +1,7 @@
 .mode-switch {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   padding: 4px;
   border: 1px solid #e0e5d8;
   border-radius: 7px;
@@ -10,12 +10,12 @@
 .mode-switch button {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 7px 12px;
+  gap: 8px;
+  padding: 8px 12px;
   background: transparent;
   border: 0;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 13px;
   color: #5e6b56;
   white-space: nowrap;
 }
@@ -28,7 +28,7 @@
   width: min(1160px, calc(100% - 96px));
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
-  gap: 70px;
+  gap: 72px;
   margin-top: 44px;
 }
 .draft-column {
@@ -41,14 +41,14 @@
   min-height: 225px;
 }
 .x-mode .document-subline {
-  margin-top: 9px;
+  margin-top: 8px;
 }
 .x-mode .intent-row {
   margin-top: 24px;
 }
 .x-sidebar {
-  position: sticky;
-  top: 28px;
+  /* Long references stay in normal page flow so every line remains reachable. */
+  position: static;
   align-self: start;
   min-width: 0;
 }
@@ -56,7 +56,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 10px;
+  font-size: 13px;
   letter-spacing: 1.8px;
   color: #65725e;
 }
@@ -74,14 +74,14 @@
   color: #364730;
 }
 .sidebar-intro {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.8;
   color: #67745f;
-  margin: 0 0 26px;
+  margin: 0 0 24px;
 }
 .source-form label,
 .manual-source label {
-  font-size: 10px;
+  font-size: 13px;
   color: #58664f;
   font-weight: 500;
   display: block;
@@ -93,7 +93,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 5px 5px 11px;
+  padding: 4px 4px 4px 12px;
   background: #fbfcf6;
   color: #718364;
   min-width: 0;
@@ -111,7 +111,7 @@
   background: transparent;
   border: 0;
   outline: none !important;
-  font-size: 10px;
+  font-size: 13px;
   color: #34492d;
   height: 27px;
   padding: 0;
@@ -136,29 +136,29 @@
 .source-loading {
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 11px;
+  gap: 8px;
+  font-size: 13px;
   color: #64785a;
-  margin: 18px 0;
+  margin: 16px 0;
 }
 .source-error {
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.7;
   color: #874b37;
-  margin: 14px 0;
+  margin: 16px 0;
 }
 .reference-card {
   background: #fdfef9;
   border: 1px solid #dfe5d7;
   border-radius: 10px;
-  margin-top: 22px;
-  padding: 20px 19px 12px;
+  margin-top: 24px;
+  padding: 20px 20px 12px;
   box-shadow: 0 3px 12px #56634505;
 }
 .reference-card header {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
 }
 .reference-avatar {
   height: 31px;
@@ -178,16 +178,16 @@
 }
 .reference-card header strong {
   display: block;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   color: #35482d;
   overflow-wrap: anywhere;
 }
 .reference-card header div span {
   display: block;
-  font-size: 10px;
+  font-size: 13px;
   color: #68765f;
-  margin-top: 3px;
+  margin-top: 4px;
 }
 .reference-card header > svg {
   color: #4b5743;
@@ -206,8 +206,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  font-size: 9px;
+  gap: 8px;
+  font-size: 13px;
   color: #65755b;
   border-top: 1px solid #e5eadc;
   padding-top: 12px;
@@ -223,33 +223,33 @@
   text-decoration: underline;
 }
 .reference-note {
-  font-size: 9px;
+  font-size: 13px;
   line-height: 1.65;
   color: #6a755f;
   margin: 12px 0;
 }
 .source-incomplete {
   padding: 12px;
-  margin: 14px 0;
+  margin: 16px 0;
   background: #f5f0e4;
   border: 1px solid #e5dbc5;
   border-radius: 6px;
   color: #705834;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.65;
 }
-.source-incomplete p { margin: 5px 0 9px; }
+.source-incomplete p { margin: 4px 0 8px; }
 .source-incomplete button {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   padding: 0;
   border: 0;
   background: transparent;
   color: #654a26;
   text-decoration: underline;
   text-underline-offset: 3px;
-  font-size: 11px;
+  font-size: 13px;
 }
 .remove-source {
   display: flex;
@@ -257,33 +257,33 @@
   gap: 4px;
   background: transparent;
   border: 0;
-  font-size: 9px;
+  font-size: 13px;
   color: #69765f;
-  padding: 5px 0;
+  padding: 4px 0;
 }
 .remove-source:hover:not(:disabled) {
   color: #884b3c;
 }
 .source-empty {
-  padding: 33px 12px 27px;
+  padding: 32px 12px 28px;
   text-align: center;
   border: 1px dashed #d8e1ce;
   border-radius: 8px;
-  margin-top: 21px;
+  margin-top: 20px;
   color: #7b8c6c;
 }
 .source-empty p {
   font-family: var(--serif);
   font-style: italic;
   line-height: 1.8;
-  font-size: 12px;
+  font-size: 13px;
   color: #536348;
-  margin: 13px 0 0;
+  margin: 12px 0 0;
 }
 .paste-source-toggle {
   background: transparent;
   border: 0;
-  font-size: 10px;
+  font-size: 13px;
   color: #546b47;
   padding: 0;
   margin: 16px 0;
@@ -297,11 +297,11 @@
   background: #edf1e6;
   border: 1px solid #dce4d1;
   border-radius: 7px;
-  padding: 15px;
-  gap: 6px;
+  padding: 16px;
+  gap: 8px;
 }
 .manual-source label {
-  margin: 6px 0 0;
+  margin: 8px 0 0;
 }
 .manual-source label span {
   font-weight: 400;
@@ -312,8 +312,8 @@
   border: 1px solid #d6dfcb;
   background: #fcfdf7;
   border-radius: 4px;
-  font-size: 11px;
-  padding: 9px;
+  font-size: 13px;
+  padding: 8px;
   color: #405736;
   line-height: 1.7;
   resize: vertical;
@@ -327,24 +327,24 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   border: 0;
   border-radius: 4px;
   color: #f9fbf4;
   background: #526f42;
-  padding: 10px 12px;
-  font-size: 10px;
-  margin-top: 7px;
+  padding: 8px 12px;
+  font-size: 13px;
+  margin-top: 8px;
 }
 .small-primary:hover:not(:disabled) {
   background: #405c32;
 }
 .source-footnote {
-  font-size: 10px;
+  font-size: 13px;
   color: #63755a;
   line-height: 1.8;
-  margin: 10px 0 0;
-  padding-top: 15px;
+  margin: 8px 0 0;
+  padding-top: 16px;
   border-top: 1px solid #dde5d4;
 }
 .post-handoff {
@@ -361,8 +361,8 @@
 .post-options label {
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 11px;
+  gap: 8px;
+  font-size: 13px;
   color: #5a6f4d;
 }
 .post-options input {
@@ -377,23 +377,23 @@
   font-variant-numeric: tabular-nums;
 }
 .character-count > span {
-  font-size: 11px;
+  font-size: 13px;
   color: #617155;
 }
 .character-count.over-limit {
   color: #9b5238;
 }
 .length-note {
-  font-size: 10px;
+  font-size: 13px;
   color: #925035;
   line-height: 1.7;
-  margin: 10px 0 0;
+  margin: 8px 0 0;
 }
 .post-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 17px;
+  gap: 8px;
+  margin-top: 16px;
 }
 .copy-post {
   display: flex;
@@ -404,8 +404,8 @@
   border-radius: 6px;
   background: #405c36;
   color: #fbfcf8;
-  padding: 11px 16px;
-  font-size: 11px;
+  padding: 12px 16px;
+  font-size: 13px;
   min-width: 121px;
 }
 .copy-post:hover:not(:disabled) {
@@ -421,8 +421,8 @@
   border-radius: 6px;
   background: #fafbf5;
   color: #49643c;
-  font-size: 11px;
-  padding: 10px 13px;
+  font-size: 13px;
+  padding: 8px 12px;
   white-space: nowrap;
 }
 .open-x:not(.disabled):hover {
@@ -434,23 +434,23 @@
 }
 .copy-confirmation {
   margin-left: auto;
-  font-size: 10px;
+  font-size: 13px;
   color: #637458;
   text-align: right;
   line-height: 1.6;
 }
 .post-preview {
-  margin-top: 17px;
+  margin-top: 16px;
   color: #607056;
-  font-size: 10px;
+  font-size: 13px;
 }
 .post-preview summary {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   cursor: pointer;
   width: max-content;
-  padding: 5px 0;
+  padding: 4px 0;
   list-style: none;
 }
 .post-preview summary::-webkit-details-marker {
@@ -470,7 +470,7 @@
   background: #fbfcf6;
   border: 1px solid #dfe7d5;
   border-radius: 6px;
-  padding: 18px;
+  padding: 16px;
   font-size: 13px;
   line-height: 1.8;
   color: #3f5037;
@@ -479,10 +479,10 @@
   overflow: auto;
 }
 .post-preview > span {
-  font-size: 9px;
+  font-size: 13px;
 }
 .x-prompt-shelf {
-  margin-top: 43px;
+  margin-top: 44px;
 }
 .prompt-shelf-heading {
   display: flex;
@@ -491,7 +491,7 @@
   color: #6a805b;
 }
 .prompt-shelf-heading .eyebrow {
-  font-size: 9px;
+  font-size: 13px;
   letter-spacing: 1.5px;
   color: #66765b;
 }
@@ -505,18 +505,19 @@
 }
 .prompt-categories {
   display: flex;
-  gap: 17px;
+  gap: 16px;
+  flex-wrap: wrap;
   align-items: center;
   border-bottom: 1px solid #dce4d2;
-  margin-top: 22px;
+  margin-top: 24px;
 }
 .prompt-categories button {
   background: transparent;
   border: 0;
   border-bottom: 2px solid transparent;
-  padding: 0 0 10px;
+  padding: 0 0 8px;
   color: #607054;
-  font-size: 10px;
+  font-size: 13px;
 }
 .prompt-categories button[aria-pressed="true"] {
   border-color: #6e875d;
@@ -525,20 +526,20 @@
 }
 .prompt-choices {
   display: grid;
-  gap: 2px;
-  margin-top: 7px;
+  gap: 0px;
+  margin-top: 8px;
 }
 .prompt-choice {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 17px;
+  gap: 16px;
   text-align: left;
   background: transparent;
   border: 0;
   border-radius: 6px;
-  padding: 12px 9px;
-  margin: 0 -9px;
+  padding: 12px 8px;
+  margin: 0 -8px;
   color: #647b54;
 }
 .prompt-choice:hover:not(:disabled) {
@@ -549,13 +550,13 @@
 }
 .prompt-choice strong {
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   color: #465d3a;
   font-weight: 500;
 }
 .prompt-choice > span > span {
   display: block;
-  font-size: 10px;
+  font-size: 13px;
   line-height: 1.6;
   margin-top: 4px;
   color: #627354;
@@ -567,10 +568,10 @@
   opacity: 0.55;
 }
 .prompt-shelf-note {
-  font-size: 9px;
+  font-size: 13px;
   color: #627357;
   line-height: 1.7;
-  margin-top: 15px;
+  margin-top: 16px;
 }
 .copy-dialog textarea {
   width: 100%;
@@ -578,7 +579,7 @@
   resize: vertical;
   border: 1px solid #cad7c0;
   border-radius: 6px;
-  padding: 14px;
+  padding: 16px;
   color: #3d5033;
   font-size: 13px;
   background: #f9fbf3;
@@ -594,7 +595,7 @@
 }
 @media (min-width: 1500px) {
   .workspace.x-workspace {
-    margin-top: 65px;
+    margin-top: 64px;
   }
 }
 @media (max-width: 1150px) {
@@ -602,10 +603,10 @@
     padding: 0 28px;
   }
   .mode-switch button {
-    padding: 7px 9px;
+    padding: 8px 8px;
   }
   .header-actions {
-    gap: 3px;
+    gap: 4px;
   }
   .document-picker select {
     max-width: 115px;
@@ -618,11 +619,14 @@
   .x-mode .document-title {
     font-size: 31px;
   }
+  .post-actions { flex-wrap: wrap; }
   .copy-confirmation {
-    display: none;
+    width: 100%;
+    margin-left: 0;
+    text-align: left;
   }
   .x-mode .document-subline > span {
-    font-size: 10px;
+    font-size: 13px;
   }
 }
 @media (max-width: 850px) {
@@ -644,10 +648,10 @@
     gap: 12px;
   }
   .prompt-categories button {
-    font-size: 9px;
+    font-size: 13px;
   }
   .reference-card {
-    padding: 15px 13px 11px;
+    padding: 16px 12px 12px;
   }
 }
 @media (max-width: 760px) {
@@ -655,18 +659,18 @@
     position: absolute;
     top: 76px;
     left: 24px;
-    padding: 3px;
+    padding: 4px;
   }
   .mode-switch button {
-    padding: 6px 9px;
-    font-size: 10px;
+    padding: 8px 8px;
+    font-size: 13px;
   }
   .mode-switch button svg {
     width: 12px;
   }
   .app-header {
     height: 111px;
-    padding: 0 22px 29px;
+    padding: 0 24px 28px;
   }
   .document-picker {
     top: 82px !important;
@@ -679,7 +683,7 @@
     max-width: 135px !important;
   }
   .workspace {
-    margin-top: 38px;
+    margin-top: 40px;
   }
   .workspace.x-workspace {
     display: flex;
@@ -697,27 +701,27 @@
     font-size: 22px;
   }
   .sidebar-intro {
-    margin-bottom: 19px;
+    margin-bottom: 20px;
   }
   .source-empty {
-    padding: 18px 12px;
+    padding: 16px 12px;
   }
   .source-empty p {
-    font-size: 12px;
+    font-size: 13px;
   }
   .reference-card {
-    padding: 18px;
-    margin-top: 18px;
+    padding: 16px;
+    margin-top: 16px;
   }
   .reference-card header strong {
-    font-size: 12px;
+    font-size: 13px;
   }
   .reference-attribution,
   .reference-note {
-    font-size: 10px;
+    font-size: 13px;
   }
   .source-footnote {
-    font-size: 10px;
+    font-size: 13px;
     margin-top: 0;
   }
   .x-mode .document-title {
@@ -727,7 +731,7 @@
     min-height: 210px;
   }
   .x-mode .page-topline {
-    margin-bottom: 23px;
+    margin-bottom: 24px;
   }
   .post-handoff {
     margin-top: 20px;
@@ -738,14 +742,14 @@
   .copy-post,
   .open-x {
     flex: 1;
-    padding: 11px;
+    padding: 12px;
   }
   .copy-confirmation {
     display: block;
     width: 100%;
     text-align: left;
     margin-left: 0;
-    margin-top: 3px;
+    margin-top: 4px;
   }
   .prompt-shelf-heading h2 {
     font-size: 22px;
@@ -754,22 +758,35 @@
     gap: 20px;
   }
   .prompt-categories button {
-    font-size: 10px;
+    font-size: 13px;
   }
   .prompt-choice {
-    padding-top: 15px;
-    padding-bottom: 15px;
+    padding-top: 16px;
+    padding-bottom: 16px;
   }
   .prompt-choice strong {
     font-size: 13px;
   }
   .prompt-choice > span > span {
-    font-size: 11px;
+    font-size: 13px;
   }
   .prompt-shelf-note {
-    font-size: 10px;
+    font-size: 13px;
   }
   .is-focused.x-mode .x-workspace {
     width: calc(100% - 48px);
   }
+}
+
+@media (pointer: coarse) {
+  .source-url-field input,
+  .manual-source input,
+  .manual-source textarea,
+  .copy-dialog textarea { font-size: 16px; }
+  .source-url-field button { width: 44px; height: 44px; }
+  .paste-source-toggle, .remove-source, .post-preview summary,
+  .prompt-categories button, .source-incomplete button,
+  .reference-attribution a, .post-options label { min-height: 44px; }
+  .paste-source-toggle { margin: 8px 0; }
+  .post-preview summary { max-width: 100%; }
 }

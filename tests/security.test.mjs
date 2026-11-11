@@ -11,7 +11,7 @@ const marker = 'THIS_IS_FAKE_PRIVATE_SERVER_DATA';
 
 async function fixture(t, production = true) {
   const root = await mkdtemp(path.join(tmpdir(), 'between-security-'));
-  await Promise.all(['src', 'dist/assets', 'node_modules/.vite/deps', 'server'].map(folder => mkdir(path.join(root, folder), { recursive: true })));
+  await Promise.all(['src', 'dist/assets', 'dist/images', 'public/images', 'node_modules/.vite/deps', 'server'].map(folder => mkdir(path.join(root, folder), { recursive: true })));
   await Promise.all([
     writeFile(path.join(root, 'index.html'), '<!doctype html><html><head></head><body><script type="module" src="/src/main.js"></script></body></html>'),
     writeFile(path.join(root, 'src/main.js'), 'document.body.dataset.loaded = "true";'),
@@ -20,6 +20,12 @@ async function fixture(t, production = true) {
     writeFile(path.join(root, 'server.mjs'), marker),
     writeFile(path.join(root, 'server/private.mjs'), marker),
     writeFile(path.join(root, '.env.local'), `OPENAI_API_KEY=${marker}`),
+    ...['public', 'dist'].flatMap(folder => [
+      writeFile(path.join(root, folder, 'images/logo.png'), 'fixture-logo'),
+      writeFile(path.join(root, folder, 'images/walden-pond.webp'), 'fixture-scene'),
+      writeFile(path.join(root, folder, 'images/ASSETS.md'), marker),
+      writeFile(path.join(root, folder, 'images/private.png'), marker),
+    ]),
   ]);
   const noNetwork = () => assert.fail('Security test must not make outbound requests');
   const instance = await createApp({ root, production, apiOptions: { apiKey: '', fetchImpl: noNetwork }, xOptions: { fetchImpl: noNetwork } });
@@ -68,6 +74,28 @@ test('production caches fingerprinted assets but never the HTML document or API'
   assert.equal((await fetch(base + '/')).headers.get('cache-control'), 'no-store');
   assert.equal((await fetch(base + '/api/health')).headers.get('cache-control'), 'no-store');
 });
+
+for (const production of [true, false]) {
+  test(`${production ? 'production' : 'development'} serves only the two public brand images, read only`, async t => {
+    const { base } = await fixture(t, production);
+    for (const [route, type, bytes] of [['/images/logo.png', 'image/png', 'fixture-logo'], ['/images/walden-pond.webp', 'image/webp', 'fixture-scene']]) {
+      const response = await fetch(base + route);
+      assert.equal(response.status, 200);
+      assert.match(response.headers.get('content-type'), new RegExp(type));
+      assert.equal(await response.text(), bytes);
+      assert.match(response.headers.get('content-security-policy'), /img-src 'self' data:/);
+      assert.equal((await fetch(base + route, { method: 'HEAD' })).status, 200);
+      const post = await fetch(base + route, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      assert.equal(post.status, 405);
+      assert.equal(post.headers.get('allow'), 'GET, HEAD');
+    }
+    for (const route of ['/images/', '/images/ASSETS.md', '/images/private.png', '/images/logo.png/extra', '/images/%252e%252e/server.mjs']) {
+      const response = await raw(base, route);
+      assert.ok([403, 404].includes(response.status), `${route}: ${response.status}`);
+      assert.doesNotMatch(response.body, new RegExp(marker));
+    }
+  });
+}
 
 test('all app routes reject hostile origins, same-site sibling apps, and DNS rebinding', async t => {
   const { base } = await fixture(t);

@@ -1,4 +1,5 @@
 import { useState, type RefObject } from "react";
+import { isBackdropClick } from "./dialog";
 import { X } from "@phosphor-icons/react";
 
 export type ConnectionStatus = "loading" | "ready" | "missing" | "error" | "quota";
@@ -10,11 +11,11 @@ export default function ConnectionDialog({ dialogRef, status, onCheck }: {
 }) {
   const [checking, setChecking] = useState(false);
   return (
-    <dialog ref={dialogRef} className="help-dialog connection-dialog" aria-labelledby="connection-title"
-      onClick={(event) => { if (event.target === dialogRef.current) dialogRef.current?.close(); }}>
+    <dialog ref={dialogRef} className="help-dialog connection-dialog" aria-labelledby="connection-title" aria-describedby="connection-description"
+      onClick={(event) => { if (isBackdropClick(event)) dialogRef.current?.close(); }}>
       <button className="icon-button dialog-close" aria-label="Close OpenAI settings" onClick={() => dialogRef.current?.close()}><X size={21} /></button>
       <h2 id="connection-title">Connect OpenAI</h2>
-      <p>Bring your own API key to enable writing help. Your drafts, references, and copy tools work without one.</p>
+      <p id="connection-description">Bring your own API key to enable writing help. Your drafts, references, and copy tools work without one.</p>
       <ol className="setup-steps">
         <li><strong>Get an API key.</strong><span>Create one in <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer">OpenAI Platform</a>. API usage is billed separately from ChatGPT.</span></li>
         <li><strong>Save it on this computer.</strong><span>Run this command in the Between folder. The key is hidden as you enter it.</span><pre><code>npm run setup</code></pre></li>

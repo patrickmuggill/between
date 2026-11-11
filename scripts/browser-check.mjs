@@ -17,7 +17,7 @@ const env = {
   BETWEEN_SKIP_DOTENV: "1", NO_UPDATE_NOTIFIER: "1",
   PWTEST_DAEMON_SESSION_DIR: path.join(temporary, "sessions"),
 };
-const suites = ["browser-check.js", "x-browser-check.js", "x-regression-check.js", "x-reference-check.js", "performance-check.js", "onboarding-check.js"];
+const suites = ["browser-check.js", "x-browser-check.js", "x-regression-check.js", "x-reference-check.js", "performance-check.js", "onboarding-check.js", "ai-lifecycle-check.js", "interaction-check.js", "storage-recovery-check.js", "app-navigation-check.js"];
 let server;
 let serverOutput = "";
 let browserOpened = false;

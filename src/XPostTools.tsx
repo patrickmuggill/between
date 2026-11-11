@@ -7,10 +7,12 @@ import {
   Eye,
   X,
 } from "@phosphor-icons/react";
+import { isBackdropClick } from "./dialog";
 import { composePost, composerUrl, postLength } from "./x-post";
 import { X_PROMPT_GROUPS, type XPrompt } from "./x-prompts";
 
 type Props = {
+  visible: boolean;
   draft: string;
   sourceUrl?: string;
   includeSource: boolean;
@@ -21,6 +23,7 @@ type Props = {
   onPrompt: (prompt: XPrompt) => void;
 };
 export default function XPostTools({
+  visible,
   draft,
   sourceUrl,
   includeSource,
@@ -33,6 +36,9 @@ export default function XPostTools({
   const [copied, setCopied] = useState(false);
   const [group, setGroup] = useState(X_PROMPT_GROUPS[0].id);
   const manualCopy = useRef<HTMLDialogElement>(null);
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
+  useEffect(() => { if (!visible) manualCopy.current?.close(); }, [visible]);
   const manualText = useRef<HTMLTextAreaElement>(null);
   const text = useMemo(() => composePost(draft, includeSource ? sourceUrl : undefined), [draft, includeSource, sourceUrl]);
   const length = useMemo(() => postLength(text), [text]);
@@ -52,6 +58,7 @@ export default function XPostTools({
       await navigator.clipboard.writeText(text);
       setCopied(true);
     } catch {
+      if (!visibleRef.current) return;
       manualCopy.current?.showModal();
       manualText.current?.focus();
       manualText.current?.select();
@@ -186,6 +193,8 @@ export default function XPostTools({
         ref={manualCopy}
         className="help-dialog copy-dialog"
         aria-labelledby="copy-title"
+        aria-describedby="copy-description"
+        onClick={(event) => { if (isBackdropClick(event)) manualCopy.current?.close(); }}
       >
         <button
           className="icon-button dialog-close"
@@ -195,7 +204,7 @@ export default function XPostTools({
           <X size={20} />
         </button>
         <h2 id="copy-title">Copy your post</h2>
-        <p>
+        <p id="copy-description">
           Your browser blocked clipboard access. The text is selected below;
           press <kbd>⌘ / Ctrl C</kbd>, then paste it into X.
         </p>

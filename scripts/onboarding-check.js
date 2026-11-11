@@ -33,7 +33,7 @@ async (page) => {
   };
   let stage = 'fresh X workspace';
   try {
-    await p.goto(base);
+    await p.goto(`${base}/#/editor`);
     const body = p.getByRole('textbox', { name: 'Document body', exact: true });
     await p.getByRole('button', { name: 'Set up OpenAI', exact: true }).waitFor();
     assert(await p.getByRole('button', { name: 'X post', exact: true }).getAttribute('aria-pressed') === 'true', 'Fresh install did not start in X mode');

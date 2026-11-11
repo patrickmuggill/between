@@ -49,7 +49,7 @@ async (page) => {
   const serializeCount = () => testPage.evaluate(() => window.__betweenSerializations);
   const resetCount = () => testPage.evaluate(() => { window.__betweenSerializations = 0; });
   try {
-    await testPage.goto(base, { waitUntil: 'domcontentloaded' });
+    await testPage.goto(`${base}/#/editor`, { waitUntil: 'domcontentloaded' });
     await body.waitFor();
     await testPage.getByRole('button', { name: 'Auto-detect on', exact: true }).click();
     await testPage.evaluate(() => {
