@@ -3,7 +3,7 @@ import { Extension, getSchema } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
-import { normalizeXUrl } from "./x-post";
+import { normalizeXUrl } from "./x-post.ts";
 
 export type DocumentRecord = {
   id: string;
@@ -43,23 +43,48 @@ export const welcome: DocumentRecord = {
     content: [paragraph("")],
   },
 };
-export function loadDocuments(): DocumentRecord[] {
+export type DocumentLoad = {
+  documents: DocumentRecord[];
+  recovery: { raw: string | null; backupKey: string | null } | null;
+  writeBlocked: boolean;
+};
+type DraftStorage = Pick<Storage, "getItem" | "setItem">;
+
+/** Preserve exact original bytes before permitting recovery to overwrite storage.
+ * Reuse identical backups (including React Strict Mode initialization), but never
+ * replace a different backup. Failure leaves the canonical collection untouched.
+ */
+function preserveOriginal(storage: DraftStorage, raw: string): string {
+  for (let suffix = 0; ; suffix += 1) {
+    const key = `${STORAGE_KEY}.recovery${suffix ? `.${suffix}` : ""}`;
+    const existing = storage.getItem(key);
+    if (existing === raw) return key;
+    if (existing !== null) continue;
+    storage.setItem(key, raw);
+    if (storage.getItem(key) !== raw) throw new Error("Recovery backup was not saved.");
+    return key;
+  }
+}
+
+export function loadDocumentState(storage?: DraftStorage): DocumentLoad {
+  let raw: string | null;
+  try { storage ??= localStorage; raw = storage.getItem(STORAGE_KEY); }
+  catch { return { documents: [welcome], recovery: { raw: null, backupKey: null }, writeBlocked: true }; }
+  if (raw === null) return { documents: [welcome], recovery: null, writeBlocked: false };
+  let damaged = false;
+  let documents: DocumentRecord[] = [];
   try {
-    const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-    if (
-      Array.isArray(data) &&
-      data.length &&
-      data.every(
-        (d) =>
-          typeof d.id === "string" &&
-          typeof d.title === "string" &&
-          d.content?.type === "doc" &&
-          Array.isArray(d.content.content),
-      )
-    ) {
-      const schema = getSchema([StarterKit]);
-      for (const doc of data) schema.nodeFromJSON(doc.content).check();
-      return data.map((doc) => {
+    const data: unknown = JSON.parse(raw);
+    if (!Array.isArray(data)) throw new Error("Invalid draft collection.");
+    const schema = getSchema([StarterKit]);
+    const ids = new Set<string>();
+    for (const doc of data) {
+      try {
+        if (!doc || typeof doc.id !== "string" || typeof doc.title !== "string" ||
+          doc.content?.type !== "doc" || !Array.isArray(doc.content.content) || ids.has(doc.id))
+          throw new Error("Invalid draft.");
+        schema.nodeFromJSON(doc.content).check();
+        ids.add(doc.id);
         let reference: XReference | undefined;
         const value = doc.reference;
         if (value && typeof value.text === "string" && value.text.trim() && value.text.length <= 60_000 &&
@@ -75,7 +100,8 @@ export function loadDocuments(): DocumentRecord[] {
             };
           } catch { /* A malformed source must not make the draft inaccessible. */ }
         }
-        return {
+        if (value && !reference) damaged = true;
+        documents.push({
           ...doc,
           mode: doc.mode === "x" ? "x" : "document",
           reference,
@@ -83,13 +109,24 @@ export function loadDocuments(): DocumentRecord[] {
           pendingPrompts: Array.isArray(doc.pendingPrompts)
             ? doc.pendingPrompts.filter((text: unknown) => typeof text === "string" && text.length <= 6000).slice(-100)
             : [],
-        };
-      });
+        });
+      } catch { damaged = true; }
     }
+  } catch { damaged = true; }
+  if (!documents.length) documents = [welcome];
+  if (!damaged) return { documents, recovery: null, writeBlocked: false };
+  try {
+    const backupKey = preserveOriginal(storage, raw);
+    return { documents, recovery: { raw, backupKey }, writeBlocked: false };
   } catch {
-    /* Storage is optional; editing remains available. */
+    return { documents, recovery: { raw, backupKey: null }, writeBlocked: true };
   }
-  return [welcome];
+}
+
+export function saveDocuments(storage: DraftStorage, load: DocumentLoad, documents: DocumentRecord[], activeId: string) {
+  if (load.writeBlocked) throw new Error("Original drafts must be preserved before saving.");
+  storage.setItem(STORAGE_KEY, JSON.stringify(documents));
+  storage.setItem(ACTIVE_KEY, activeId);
 }
 export function markdown(node: JSONContent): string {
   if (node.type === "text") {

@@ -34,3 +34,11 @@ jobs:
       - run: npm run test:browser
         env:
           CI: "true"
+      - name: Keep synthetic browser screenshots for review
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: browser-screenshots
+          path: output/playwright/*.png
+          if-no-files-found: ignore
+          retention-days: 7

@@ -27,6 +27,11 @@ export default function XReferenceSidebar({
   const [manualText, setManualText] = useState(reference?.text || "");
   const [author, setAuthor] = useState(reference?.authorName || "");
   const [pendingReference, setPendingReference] = useState<XReference | null>(null);
+  const manualInput = useRef<HTMLTextAreaElement>(null);
+  const manualToggle = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (manual) manualInput.current?.focus();
+  }, [manual]);
   const abort = useRef<AbortController | null>(null);
   useEffect(() => () => abort.current?.abort(), []);
   useEffect(() => {
@@ -104,6 +109,7 @@ export default function XReferenceSidebar({
       });
       setError("");
       setManual(false);
+      manualToggle.current?.focus();
     } catch (e) {
       setError(
         e instanceof Error
@@ -129,6 +135,9 @@ export default function XReferenceSidebar({
           <input
             id="source-url"
             type="url"
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
             aria-label="X post link"
             placeholder="https://x.com/…/status/…"
             value={url}
@@ -204,10 +213,7 @@ export default function XReferenceSidebar({
               <strong>X may have shortened this post.</strong>
               <p>Open the original and paste the complete text to keep the whole thought here.</p>
               <button disabled={disabled || loading} onClick={() => {
-                setManualText(reference.text);
-                setAuthor(reference.authorName);
                 setManual(true);
-                requestAnimationFrame(() => document.getElementById("source-text")?.focus());
               }}>Paste complete text <ArrowRight size={13} /></button>
             </div>
           )}
@@ -235,12 +241,12 @@ export default function XReferenceSidebar({
       )}
       <button
         className="paste-source-toggle"
+        ref={manualToggle}
         aria-expanded={manual}
+        aria-controls="manual-source"
         disabled={disabled || loading}
         onClick={() => {
           setManual(!manual);
-          setManualText(reference?.text || manualText);
-          setAuthor(reference?.authorName || author);
         }}
       >
         {manual
@@ -250,7 +256,7 @@ export default function XReferenceSidebar({
             : "Or paste the post’s text"}
       </button>
       {manual && (
-        <div className="manual-source">
+        <div className="manual-source" id="manual-source">
           <label htmlFor="source-author">
             Author <span>(optional)</span>
           </label>
@@ -266,13 +272,16 @@ export default function XReferenceSidebar({
           <label htmlFor="source-text">Original post text</label>
           <textarea
             id="source-text"
+            ref={manualInput}
+            aria-invalid={manualText.length > 60_000}
+            aria-describedby={manualText.length > 60_000 ? "source-text-limit" : undefined}
             rows={7}
             value={manualText}
             onChange={(e) => setManualText(e.target.value)}
             placeholder="Paste the words you want to respond to…"
             disabled={disabled || loading}
           />
-          {manualText.length > 60_000 && <p className="source-error" role="alert">This text exceeds the 60,000-character reference limit. Your pasted text is intact; shorten it before saving.</p>}
+          {manualText.length > 60_000 && <p id="source-text-limit" className="source-error" role="alert">This text exceeds the 60,000-character reference limit. Your pasted text is intact; shorten it before saving.</p>}
           <button
             className="small-primary"
             onClick={saveManual}

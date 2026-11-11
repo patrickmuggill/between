@@ -47,8 +47,8 @@
   margin-top: 24px;
 }
 .x-sidebar {
-  position: sticky;
-  top: 28px;
+  /* Long references stay in normal page flow so every line remains reachable. */
+  position: static;
   align-self: start;
   min-width: 0;
 }
@@ -506,6 +506,7 @@
 .prompt-categories {
   display: flex;
   gap: 17px;
+  flex-wrap: wrap;
   align-items: center;
   border-bottom: 1px solid #dce4d2;
   margin-top: 22px;
@@ -618,8 +619,11 @@
   .x-mode .document-title {
     font-size: 31px;
   }
+  .post-actions { flex-wrap: wrap; }
   .copy-confirmation {
-    display: none;
+    width: 100%;
+    margin-left: 0;
+    text-align: left;
   }
   .x-mode .document-subline > span {
     font-size: 10px;
@@ -772,4 +776,17 @@
   .is-focused.x-mode .x-workspace {
     width: calc(100% - 48px);
   }
+}
+
+@media (pointer: coarse) {
+  .source-url-field input,
+  .manual-source input,
+  .manual-source textarea,
+  .copy-dialog textarea { font-size: 16px; }
+  .source-url-field button { width: 44px; height: 44px; }
+  .paste-source-toggle, .remove-source, .post-preview summary,
+  .prompt-categories button, .source-incomplete button,
+  .reference-attribution a, .post-options label { min-height: 44px; }
+  .paste-source-toggle { margin: 6px 0; }
+  .post-preview summary { max-width: 100%; }
 }

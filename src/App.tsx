@@ -28,9 +28,9 @@ import {
   currentBlock,
   IntentDecoration,
   intentKey,
-  loadDocuments,
+  loadDocumentState,
+  saveDocuments,
   markdown,
-  STORAGE_KEY,
   ACTIVE_KEY,
   type Block,
   type DocumentRecord,
@@ -41,6 +41,8 @@ import XPostTools from "./XPostTools";
 import { plainPost } from "./x-post";
 import type { XPrompt } from "./x-prompts";
 import ConnectionDialog from "./ConnectionDialog";
+import { AILifecycle, type AIPhase } from "./ai-lifecycle";
+import { isBackdropClick } from "./dialog";
 
 type Decision = {
   intent: "writing" | "prompting" | "uncertain";
@@ -102,7 +104,8 @@ function plainTextParagraphs(text: string): JSONContent[] {
 }
 
 export default function App() {
-  const [documents, setDocuments] = useState(loadDocuments);
+  const [documentLoad] = useState(() => loadDocumentState());
+  const [documents, setDocuments] = useState(documentLoad.documents);
   const documentsRef = useRef(documents);
   documentsRef.current = documents;
   const [activeId, setActiveId] = useState(() => {
@@ -123,11 +126,12 @@ export default function App() {
   const connectionRef = useRef(connection);
   connectionRef.current = connection;
   const connectionDialog = useRef<HTMLDialogElement>(null);
-  const [saved, setSaved] = useState(true);
-  const [storageError, setStorageError] = useState(false);
+  const [saved, setSaved] = useState(!documentLoad.writeBlocked);
+  const [storageError, setStorageError] = useState(documentLoad.writeBlocked);
   const [decision, setDecision] = useState<Decision | null>(null);
-  const [checking, setChecking] = useState(false);
-  const [generating, setGenerating] = useState(false);
+  const [aiPhase, setAIPhase] = useState<AIPhase>("idle");
+  const checking = aiPhase === "detecting";
+  const generating = aiPhase === "generating";
   const [preview, setPreview] = useState("");
   const [notice, setNotice] = useState<Notice>(null);
   const [tick, setTick] = useState(0);
@@ -143,10 +147,9 @@ export default function App() {
   const writingOverrides = useRef(new Map<string, Set<string>>());
   const autoRef = useRef(automatic);
   const suppress = useRef(false);
-  const busy = useRef(false);
+  const lifecycle = useRef(new AILifecycle());
   const mounted = useRef(true);
-  const detectAbort = useRef<AbortController | null>(null);
-  const generateAbort = useRef<AbortController | null>(null);
+  const detectionFrom = useRef<number | null>(null);
   const detectorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const decided = useRef<{ snapshot: Snapshot; decision: Decision } | null>(
     null,
@@ -274,7 +277,7 @@ export default function App() {
   }
 
   function treatPromptsAsWriting() {
-    if (!editor || busy.current) return;
+    if (!editor || lifecycle.current.phase === "generating") return;
     const texts = new Set(promptRanges(editor, active).map((range) => range.text));
     const overrides = writingOverrides.current.get(active.id) || new Set<string>();
     for (const text of texts) {
@@ -291,10 +294,11 @@ export default function App() {
 
   function clearDetection() {
     if (detectorTimer.current) clearTimeout(detectorTimer.current);
-    detectAbort.current?.abort();
+    lifecycle.current.cancel("detecting");
+    detectionFrom.current = null;
     decided.current = null;
     setDecision(null);
-    setChecking(false);
+    setAIPhase(lifecycle.current.phase);
     setDetectError(null);
     if (editor && !editor.isDestroyed)
       editor.view.dispatch(editor.state.tr.setMeta(intentKey, null));
@@ -335,10 +339,11 @@ export default function App() {
     if (["missing", "loading", "error"].includes(connectionRef.current)) return;
     if (s.mode === "x" && writingOverrides.current.get(s.docId)?.has(s.text.trim()))
       return;
-    const controller = new AbortController();
-    detectAbort.current?.abort();
-    detectAbort.current = controller;
-    setChecking(true);
+    const request = lifecycle.current.begin("detecting");
+    if (!request) return;
+    const { controller } = request;
+    detectionFrom.current = s.from;
+    setAIPhase(lifecycle.current.phase);
     try {
       const response = await fetch("/api/decide", {
         method: "POST",
@@ -351,6 +356,7 @@ export default function App() {
         }),
       });
       const result = await response.json();
+      if (!lifecycle.current.owns(request) || !valid(s)) return;
       if (!response.ok) {
         if (String(result.error).includes("quota")) setConnection("quota");
         throw new Error(result.error || "Could not check this paragraph.");
@@ -382,30 +388,31 @@ export default function App() {
           }),
         );
     } catch (error) {
-      if (!controller.signal.aborted && valid(s))
+      if (lifecycle.current.owns(request) && valid(s))
         setDetectError(
           error instanceof Error ? error.message : "Detection unavailable.",
         );
     } finally {
-      if (detectAbort.current === controller) setChecking(false);
+      if (lifecycle.current.finish(request)) setAIPhase(lifecycle.current.phase);
     }
   }
 
   function schedule(e: Editor) {
     clearDetection();
     if (
-      !autoRef.current || busy.current || e.view.composing ||
+      !autoRef.current || lifecycle.current.phase === "generating" || e.view.composing ||
       connectionRef.current !== "ready"
     ) return;
     const from = selectedBlockStart(e);
     if (from === null || e.state.selection.$from.parent.textContent.trim().length < 4)
       return;
+    detectionFrom.current = from;
     const scheduledRevision = revision.current;
     const docId = activeRef.current;
     // Build context after the pause, not on every keystroke in a long draft.
     detectorTimer.current = setTimeout(() => {
       if (
-        e.isDestroyed || busy.current || e.view.composing || !autoRef.current ||
+        e.isDestroyed || lifecycle.current.phase === "generating" || e.view.composing || !autoRef.current ||
         connectionRef.current !== "ready" || revision.current !== scheduledRevision ||
         activeRef.current !== docId || selectedBlockStart(e) !== from
       ) return;
@@ -427,15 +434,17 @@ export default function App() {
     if (!suppress.current) schedule(e);
   };
   handlers.current.select = (e) => {
-    if (busy.current) return;
-    if (decided.current && decided.current.snapshot.from !== selectedBlockStart(e))
+    if (lifecycle.current.phase === "generating") return;
+    // A selection change invalidates in-flight detection too, even if the
+    // writer returns to the same paragraph before its response arrives.
+    if (detectionFrom.current !== null && detectionFrom.current !== selectedBlockStart(e))
       clearDetection();
   };
   handlers.current.key = (event) => {
     if (event.isComposing || editor?.view.composing || event.keyCode === 229)
       return false;
-    if (event.key === "Escape" && busy.current) {
-      generateAbort.current?.abort();
+    if (event.key === "Escape" && lifecycle.current.phase === "generating") {
+      stopGeneration();
       return true;
     }
     if (event.key === "Enter" && !event.shiftKey && !event.altKey) {
@@ -465,7 +474,8 @@ export default function App() {
         if (submitted && submitted.text.trim().length >= 4)
           setTimeout(() => {
             if (
-              !editor.isDestroyed &&
+              !editor.isDestroyed && autoRef.current &&
+              lifecycle.current.phase !== "generating" &&
               activeRef.current === submitted.docId &&
               revision.current === submitted.revision + 1 &&
               editor.state.doc.nodeAt(submitted.from)?.textContent ===
@@ -485,7 +495,7 @@ export default function App() {
     target?: Snapshot,
     knownDecision?: Decision,
   ) {
-    if (!editor || busy.current || editor.view.composing) return;
+    if (!editor || lifecycle.current.phase === "generating" || editor.view.composing) return;
     if (connectionRef.current === "missing" || connectionRef.current === "error") {
       connectionDialog.current?.showModal();
       return;
@@ -502,13 +512,14 @@ export default function App() {
       return;
     if (force) writingOverrides.current.get(s.docId)?.delete(s.text.trim());
     rememberPrompt(s);
-    busy.current = true;
-    setGenerating(true);
+    clearDetection();
+    const request = lifecycle.current.begin("generating");
+    if (!request) return;
+    const { controller } = request;
+    setAIPhase(lifecycle.current.phase);
     setPreview("");
     setNotice(null);
-    clearDetection();
-    const controller = new AbortController();
-    generateAbort.current = controller;
+
     editor.setEditable(false, false);
     if (!s.external)
       editor.view.dispatch(
@@ -534,6 +545,7 @@ export default function App() {
           }),
         });
         const data = await answer.json();
+        if (!lifecycle.current.owns(request) || !valid(s)) return;
         if (!answer.ok)
           throw new Error(data.error || "Could not interpret that request.");
         action = data.action;
@@ -559,6 +571,7 @@ export default function App() {
       let buffer = "";
       while (true) {
         const chunk = await reader.read();
+        if (!lifecycle.current.owns(request) || !valid(s)) return;
         if (chunk.done) break;
         buffer += decoder
           .decode(chunk.value, { stream: true })
@@ -587,7 +600,7 @@ export default function App() {
         throw new Error(
           "The response was incomplete. Your writing is unchanged.",
         );
-      if (controller.signal.aborted || !valid(s)) return;
+      if (!lifecycle.current.owns(request) || !valid(s)) return;
       let content: string | JSONContent[];
       if (s.mode === "x") {
         content = [...plainTextParagraphs(output), { type: "paragraph" }];
@@ -600,7 +613,7 @@ export default function App() {
       }
       // Loading the document-only renderer is asynchronous. Escape may have
       // canceled the request while it was loading, so recheck before applying.
-      if (controller.signal.aborted || !valid(s)) return;
+      if (!lifecycle.current.owns(request) || !valid(s)) return;
       suppress.current = true;
       editor.setEditable(true, false);
       editor.view.dispatch(closeHistory(editor.state.tr));
@@ -631,9 +644,7 @@ export default function App() {
         undo: true,
       });
     } catch (error) {
-      if (controller.signal.aborted)
-        setNotice({ text: "Stopped. Your writing is unchanged." });
-      else
+      if (lifecycle.current.owns(request) && valid(s))
         setNotice({
           text:
             error instanceof Error
@@ -642,29 +653,46 @@ export default function App() {
           error: true,
         });
     } finally {
+      // A stopped request may finish after another run has already started.
+      if (!lifecycle.current.finish(request)) return;
       suppress.current = false;
-      busy.current = false;
       if (!editor.isDestroyed) {
         editor.setEditable(true, false);
         editor.view.dispatch(editor.state.tr.setMeta(intentKey, null));
       }
       if (mounted.current) {
-        setGenerating(false);
+        setAIPhase(lifecycle.current.phase);
         setPreview("");
       }
     }
   }
 
+  function stopGeneration() {
+    if (!lifecycle.current.cancel("generating")) return;
+    if (editorRef.current && !editorRef.current.isDestroyed) {
+      editorRef.current.setEditable(true, false);
+      editorRef.current.view.dispatch(editorRef.current.state.tr.setMeta(intentKey, null));
+    }
+    setAIPhase(lifecycle.current.phase);
+    setPreview("");
+    setNotice({ text: "Stopped. Your writing is unchanged." });
+  }
+
   useEffect(() => {
     mounted.current = true;
-    fetch("/api/health")
+    const controller = new AbortController();
+    fetch("/api/health", { signal: controller.signal })
       .then((r) => r.json())
-      .then((data) => setConnection(data.configured ? "ready" : "missing"))
-      .catch(() => setConnection("error"));
+      .then((data) => {
+        if (!controller.signal.aborted) setConnection(data.configured ? "ready" : "missing");
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setConnection("error");
+      });
     return () => {
       mounted.current = false;
-      detectAbort.current?.abort();
-      generateAbort.current?.abort();
+      controller.abort();
+      lifecycle.current.cancel();
       if (detectorTimer.current) clearTimeout(detectorTimer.current);
     };
   }, []);
@@ -672,8 +700,7 @@ export default function App() {
   useEffect(() => {
     const timer = setTimeout(() => {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(documents));
-        localStorage.setItem(ACTIVE_KEY, activeId);
+        saveDocuments(localStorage, documentLoad, documents, activeId);
         setSaved(true);
         setStorageError(false);
       } catch {
@@ -686,13 +713,12 @@ export default function App() {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && busy.current)
-        generateAbort.current?.abort();
+      if (event.key === "Escape" && lifecycle.current.phase === "generating")
+        stopGeneration();
     };
     const flush = () => {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(documentsRef.current));
-        localStorage.setItem(ACTIVE_KEY, activeRef.current);
+        saveDocuments(localStorage, documentLoad, documentsRef.current, activeRef.current);
       } catch {
         /* The save indicator already exposes failures. */
       }
@@ -706,7 +732,7 @@ export default function App() {
   }, []);
 
   function switchDocument(id: string) {
-    if (!editor || busy.current) return;
+    if (!editor || lifecycle.current.phase === "generating") return;
     const doc = documents.find((d) => d.id === id);
     if (!doc) return;
     clearDetection();
@@ -718,7 +744,7 @@ export default function App() {
     setNotice(null);
   }
   function newDocument(mode: "document" | "x" = active.mode || "document") {
-    if (!editor || busy.current) return;
+    if (!editor || lifecycle.current.phase === "generating") return;
     const doc: DocumentRecord = {
       id: crypto.randomUUID(),
       title: mode === "x" ? "Untitled post" : "Untitled",
@@ -738,7 +764,7 @@ export default function App() {
     setNotice(null);
   }
   function chooseMode(mode: "document" | "x") {
-    if (busy.current) return;
+    if (lifecycle.current.phase === "generating") return;
     if ((active.mode || "document") === mode) return;
     const lastId = lastActiveByMode.current[mode];
     const previous = documents.find((d) => d.id === lastId && (d.mode || "document") === mode)
@@ -748,7 +774,7 @@ export default function App() {
     setFocusMode(false);
   }
   function updateXDocument(patch: Partial<DocumentRecord>) {
-    if (busy.current) return;
+    if (lifecycle.current.phase === "generating") return;
     clearDetection();
     revision.current += 1;
     setDocuments((ds) =>
@@ -761,7 +787,7 @@ export default function App() {
     setSaved(false);
   }
   function runXPrompt(prompt: XPrompt) {
-    if (!editor || busy.current) return;
+    if (!editor || lifecycle.current.phase === "generating") return;
     const context = plainPost(filteredDraft(editor, active));
     const s: Snapshot = {
       from: 0,
@@ -795,7 +821,7 @@ export default function App() {
     setTick((t) => t + 1);
   }
   function addExample(text: string) {
-    if (!editor || busy.current) return;
+    if (!editor || lifecycle.current.phase === "generating") return;
     const last = editor.state.doc.lastChild;
     if (last?.type.name === "paragraph" && !last.textContent)
       editor.chain().focus("end").insertContent(text).run();
@@ -809,12 +835,21 @@ export default function App() {
         .run();
   }
   function undo() {
-    if (!editor || busy.current) return;
+    if (!editor || lifecycle.current.phase === "generating") return;
     suppress.current = true;
     clearDetection();
     editor.chain().focus().undo().run();
     suppress.current = false;
     setNotice(null);
+  }
+  function exportRecovery() {
+    if (documentLoad.recovery?.raw == null) return;
+    const url = URL.createObjectURL(new Blob([documentLoad.recovery.raw], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "between-original-drafts.json";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   function exportDocument() {
     if (!editor) return;
@@ -970,6 +1005,18 @@ export default function App() {
                 </span>}
               </button>
             </div>
+            {documentLoad.recovery && (
+              <div className="storage-recovery" role="alert">
+                <p>{documentLoad.recovery.raw === null
+                  ? "Saved drafts could not be read. Saving is paused to protect them. Export any new writing before reloading."
+                  : documentLoad.writeBlocked
+                    ? "Some saved drafts could not be opened. The original data is untouched, but a recovery backup could not be saved. Saving is paused; download the original data and export any new writing before reloading."
+                    : "Some saved drafts could not be opened. Any readable drafts were recovered, and the original data was backed up on this device. Download the original data to keep a separate recovery copy."}</p>
+                {documentLoad.recovery.raw !== null && (
+                  <button className="subtle-button" onClick={exportRecovery}>Download original data</button>
+                )}
+              </div>
+            )}
             <div
               className="toolbar"
               role="toolbar"
@@ -1069,7 +1116,7 @@ export default function App() {
               {generating ? (
                 <button
                   className="subtle-button"
-                  onClick={() => generateAbort.current?.abort()}
+                  onClick={stopGeneration}
                 >
                   Stop <kbd>esc</kbd>
                 </button>
@@ -1206,7 +1253,7 @@ export default function App() {
         className="help-dialog"
         aria-labelledby="help-title"
         onClick={(e) => {
-          if (e.target === helpRef.current) helpRef.current.close();
+          if (isBackdropClick(e)) e.currentTarget.close();
         }}
       >
         <button

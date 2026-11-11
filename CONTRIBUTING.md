@@ -22,15 +22,19 @@ Writing, reference entry, copying, and export work without an OpenAI key. AI det
 npm run check:release
 npm test
 npm run build
-npx --no-install playwright install chromium
+node scripts/verified-browser.mjs
 npm run test:browser
 ```
 
-On Linux, Chromium may need system packages: use `npx --no-install playwright install --with-deps chromium` when setting up a development machine or CI runner.
+Browser checks require **stable Google Chrome in its standard system location**, at least 156.0.8078.74 on macOS/Windows or 156.0.8078.73 on Linux. Install or update it from Google's official distribution, then run `node scripts/verified-browser.mjs` to check the executable before testing. The runner verifies the application signature on macOS and requires the Chromium sandbox on every platform. Bundled Chromium, an older Chrome, and disabling the sandbox are not supported fallbacks.
+
+On an ephemeral Linux CI runner, `npx --no-install playwright install --with-deps --force chrome` installs current stable Chrome and its system dependencies. This requires system installation privileges. It is the same installation step used by this repository's CI workflow; do not use it to replace a personal browser installation without checking first.
 
 The browser runner starts a separate production server on an available loopback port. It ignores local dotenv files, clears the OpenAI key, blocks server-side network requests, and intercepts API calls with synthetic fixtures. Every suite uses a fresh browser context. It does not need API credit, use real posts, or change the drafts in your regular browser. Screenshots go in ignored `output/playwright/`.
 
 The unit and integration tests exercise the server's input validation, output handling, security boundaries, copying rules, and setup behavior. Test fixtures must remain synthetic. Do not add private writing, access tokens, real keys, or copied personal browser profiles.
+
+If Chrome is missing, outdated, or cannot run with its sandbox, report browser verification as blocked. A passing unit test or build is not a substitute for the browser checks.
 
 ## What makes a useful change
 

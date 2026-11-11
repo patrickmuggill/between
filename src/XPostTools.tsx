@@ -7,6 +7,7 @@ import {
   Eye,
   X,
 } from "@phosphor-icons/react";
+import { isBackdropClick } from "./dialog";
 import { composePost, composerUrl, postLength } from "./x-post";
 import { X_PROMPT_GROUPS, type XPrompt } from "./x-prompts";
 
@@ -186,6 +187,8 @@ export default function XPostTools({
         ref={manualCopy}
         className="help-dialog copy-dialog"
         aria-labelledby="copy-title"
+        aria-describedby="copy-description"
+        onClick={(event) => { if (isBackdropClick(event)) manualCopy.current?.close(); }}
       >
         <button
           className="icon-button dialog-close"
@@ -195,7 +198,7 @@ export default function XPostTools({
           <X size={20} />
         </button>
         <h2 id="copy-title">Copy your post</h2>
-        <p>
+        <p id="copy-description">
           Your browser blocked clipboard access. The text is selected below;
           press <kbd>⌘ / Ctrl C</kbd>, then paste it into X.
         </p>

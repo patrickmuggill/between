@@ -4,6 +4,7 @@
   background: #f7f7f2;
   font-synthesis: none;
   font-weight: 400;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ink: #303b33;
   --muted: #747b72;
   --line: #e1e4da;
@@ -22,6 +23,7 @@ body {
 }
 button,
 input,
+textarea,
 select {
   font: inherit;
 }
@@ -42,15 +44,17 @@ button {
   transition:
     background 160ms ease,
     color 160ms ease,
-    transform 160ms ease;
+    transform 160ms var(--ease-out);
 }
-button:active:not(:disabled) {
+button:active:not(:disabled):not(:focus-visible) {
   transform: scale(0.97);
 }
 button:focus-visible,
 a:focus-visible,
 select:focus-visible,
-input:focus-visible {
+input:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
   outline: 2px solid #6c9271;
   outline-offset: 4px;
 }
@@ -210,7 +214,6 @@ kbd {
   width: 100%;
   background: transparent;
   border: 0;
-  outline: none !important;
   font-family: var(--serif);
   font-weight: 500;
   font-size: 40px;
@@ -665,6 +668,9 @@ kbd {
   max-width: calc(100vw - 36px);
   padding: 40px;
   box-shadow: 0 25px 90px #28302329;
+  max-height: calc(100dvh - 36px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .help-dialog::backdrop {
   background: #303b3359;
@@ -948,3 +954,35 @@ kbd {
 }
 
 .generation-preview,.writing-surface .is-processing,.writing-surface .is-empty::before{color:#66735f}
+
+/* Keyboard editing is immediate; pointer presses retain subtle feedback. */
+button:focus-visible { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  button:active:not(:disabled) { transform: none; }
+}
+@media (pointer: coarse) {
+  .icon-button, .toolbar .icon-button { min-width: 44px; min-height: 44px; }
+  .document-picker select { font-size: 16px; }
+  .toolbar { flex-wrap: wrap; gap: 8px; }
+  .format-buttons { flex-wrap: wrap; }
+}
+
+.storage-recovery {
+  margin: 16px 0;
+  padding: 14px 16px;
+  border: 1px solid #c8bc9d;
+  border-radius: 8px;
+  background: #faf5e9;
+  color: #574a30;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.storage-recovery p { margin: 0 0 8px; }
+.storage-recovery .subtle-button {
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@media (pointer: coarse) {
+  .storage-recovery .subtle-button { min-height: 44px; }
+}
