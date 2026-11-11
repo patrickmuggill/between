@@ -56,12 +56,30 @@ async (page) => {
   const body = p.getByRole('textbox', { name: 'Document body', exact: true });
   const assertEditorFocus = async label => {
     const heading = p.getByRole('heading', { name: 'Writing workspace', exact: true });
-    await until(async () => await heading.count() === 1 && await heading.evaluate(element => element === document.activeElement), `${label}: editor entry did not focus its workspace heading`);
+    try {
+      await until(async () => await heading.count() === 1 && await heading.evaluate(element => element === document.activeElement), `${label}: editor entry did not focus its workspace heading`);
+    } catch (error) {
+      const diagnostic = await p.evaluate(() => {
+        const element = document.activeElement;
+        const describe = node => node ? {
+          tag: node.tagName, id: node.id, className: node.className,
+          text: node.textContent?.slice(0, 200),
+          visible: node.checkVisibility(),
+          hiddenAncestor: Boolean(node.closest('[hidden], [inert]')),
+        } : null;
+        return { hash: location.hash, activeElement: describe(element), heading: describe([...document.querySelectorAll('h1')].find(node => node.textContent === 'Writing workspace')) };
+      });
+      throw new Error(`${error.message}\nFocus diagnostics: ${JSON.stringify(diagnostic)}`);
+    }
   };
   const nav = route => p.locator(`header a[href="#/${route}"]:visible`);
   const go = async route => {
     await nav(route).click();
     await until(() => p.evaluate(route => location.hash === `#/${route}`, route), `Did not navigate to ${route}`);
+    // A changed hash can precede React's route commit. Observe the destination
+    // before traversing history, rather than accidentally skipping the hidden
+    // editor state. No autosave delay is introduced here.
+    if (route === 'bookmarks') await p.getByRole('heading', { name: 'Thoughts to return to.', exact: true }).waitFor({ state: 'visible' });
   };
   const capture = async name => {
     const path = `output/playwright/navigation-${name}.png`;
